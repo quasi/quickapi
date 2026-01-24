@@ -1,0 +1,84 @@
+---
+name: response_helpers
+status: stable
+confidence: 0.95
+extraction_method: triangulation
+sources: [code, docs, tests]
+
+metadata:
+  tagline: "Semantic HTTP response helpers for common status codes"
+  category: core
+  added_in: "0.1.0"
+  stability: stable
+
+summary: |
+  Response helpers provide semantic functions for constructing HTTP responses
+  with appropriate status codes and JSON bodies. Each helper function returns
+  a properly formatted response tuple (status headers body) that integrates
+  with Snooze's response handling.
+
+purpose:
+  user_benefit: "Express response intent semantically instead of using magic numbers"
+  problem_solved: "Manual HTTP response construction with status codes and headers"
+  alternatives: "Direct Snooze http-condition signaling (less semantic)"
+
+key_capabilities:
+  - "Success helpers: ok (200), created (201), no-content (204)"
+  - "Error helpers: bad-request (400), not-found (404), error-response (custom status)"
+  - "Automatic JSON serialization via json-response"
+  - "Standardized error format {error, message, details}"
+  - "Integration with Snooze http-condition for error signaling"
+
+contracts:
+  - ok
+  - created
+  - no-content
+  - bad-request
+  - not-found
+  - error-response
+  - json-response
+
+scenarios:
+  - return-ok-with-data
+  - return-created-after-insert
+  - return-no-content-after-delete
+  - signal-not-found-error
+  - signal-bad-request-error
+  - return-custom-error-status
+
+properties:
+  - ok-returns-200-status
+  - created-returns-201-status
+  - no-content-returns-204-with-nil-body
+  - error-helpers-signal-http-condition
+  - error-format-consistent
+  - json-response-sets-content-type-header
+
+dependencies:
+  required:
+    - com.inuoe.jzon
+    - snooze
+  optional: []
+
+implementation_notes:
+  - "All responses return (status headers body) tuple"
+  - "Error helpers use Snooze's http-condition"
+  - "format-error creates standardized error structure"
+  - "status-to-error-type maps HTTP status to error type string"
+
+testing_status:
+  unit_tests: "Excellent (response-tests.lisp)"
+  integration_tests: "Good (integration-tests.lisp)"
+  coverage_gaps: []
+
+related_features:
+  - routing
+  - json_serialization
+  - error_handling
+  - validation
+
+evidence:
+  code: "src/response.lisp"
+  docs: "README.md:135-146"
+  tests: "tests/response-tests.lisp (10 tests)"
+  examples: "examples/todo-api.lisp (uses ok, created, not-found)"

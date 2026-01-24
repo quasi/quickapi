@@ -1,0 +1,83 @@
+---
+name: routing
+status: stable
+confidence: 0.95
+extraction_method: triangulation
+sources: [code, docs, tests, examples]
+
+metadata:
+  tagline: "Define HTTP routes with automatic path parameter extraction"
+  category: core
+  added_in: "0.1.0"
+  stability: stable
+
+summary: |
+  Routing enables defining HTTP endpoints via five route macros (api-get, api-post,
+  api-put, api-patch, api-delete). Routes support URI patterns with path parameters
+  that are automatically extracted and bound as variables in handler code.
+
+purpose:
+  user_benefit: "Define REST API endpoints with minimal boilerplate"
+  problem_solved: "Manual request routing and parameter extraction"
+  alternatives: "Direct Snooze defroute (more verbose, manual parameter handling)"
+
+key_capabilities:
+  - "Five route macros for HTTP methods (GET, POST, PUT, PATCH, DELETE)"
+  - "URI patterns with :param placeholders (e.g., /users/:id)"
+  - "Automatic path parameter extraction and variable binding"
+  - "Route registry for flexible pattern matching"
+  - "Integration with Snooze routing infrastructure"
+
+contracts:
+  - api-get
+  - api-post
+  - api-put
+  - api-patch
+  - api-delete
+  - defapi
+  - start
+  - stop
+
+scenarios:
+  - define-simple-get-route
+  - define-route-with-path-parameter
+  - define-post-route-with-body
+  - multiple-routes-same-uri-different-methods
+  - route-with-multiple-path-parameters
+
+properties:
+  - route-uniqueness-per-method-uri
+  - path-parameters-auto-bound
+  - literal-segments-case-insensitive
+  - route-registry-global
+
+dependencies:
+  required:
+    - snooze
+    - hunchentoot
+  optional: []
+
+implementation_notes:
+  - "Route registry added in commit 6e9351a (2026-01)"
+  - "Lambda-list parameter deprecated but still required for now"
+  - "Parameter symbols interned in :quickapi package"
+
+testing_status:
+  unit_tests: "Partial (parse-uri-pattern needs more coverage)"
+  integration_tests: "Good (integration-tests.lisp)"
+  coverage_gaps:
+    - "Multiple parameters in single URI"
+    - "Ambiguous patterns"
+    - "URL-encoded parameter values"
+
+related_features:
+  - json_serialization
+  - request_context
+  - validation
+
+evidence:
+  code: "src/core.lisp:13-274"
+  docs: "README.md:13, 97-109; docs/02-tutorial.md"
+  tests: "tests/integration-tests.lisp"
+  examples: "examples/todo-api.lisp (lines 57-145)"
+  commits: "6e9351a - Implement route registry and URI pattern matching"

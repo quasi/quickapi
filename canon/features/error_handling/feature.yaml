@@ -1,0 +1,83 @@
+---
+name: error_handling
+status: stable
+confidence: 0.90
+extraction_method: triangulation
+sources: [code, docs, examples]
+
+metadata:
+  tagline: "Standardized error responses with consistent JSON format"
+  category: core
+  added_in: "0.1.0"
+  stability: stable
+
+summary: |
+  Error handling provides a consistent, predictable error response format across
+  all API endpoints. Errors are signaled via Snooze's http-condition mechanism
+  and automatically formatted as JSON with error type, message, and optional details.
+  Validation errors are automatically converted to 422 responses.
+
+purpose:
+  user_benefit: "Predictable error responses that clients can parse reliably"
+  problem_solved: "Inconsistent error formats across different endpoints"
+  alternatives: "Manual error response construction (inconsistent, error-prone)"
+
+key_capabilities:
+  - "Standardized error format: {error, message, details}"
+  - "Automatic HTTP status to error type mapping"
+  - "Integration with Snooze http-condition"
+  - "Validation errors auto-converted to 422 Unprocessable Entity"
+  - "Consistent error responses across all endpoints"
+
+contracts:
+  - format-error
+  - status-to-error-type
+  - http-condition-handling
+  - validation-error-condition
+
+scenarios:
+  - validation-error-returns-422
+  - not-found-returns-404-with-error
+  - bad-request-returns-400-with-error
+  - custom-error-status
+  - multiple-validation-errors
+
+properties:
+  - error-format-always-json
+  - error-has-type-field
+  - error-has-message-field
+  - error-may-have-details-field
+  - validation-errors-collected-not-fail-fast
+  - http-condition-signals-proper-status
+
+dependencies:
+  required:
+    - snooze
+    - com.inuoe.jzon
+  optional: []
+
+implementation_notes:
+  - "format-error creates {error, message, details} structure"
+  - "status-to-error-type maps: 400→bad_request, 404→not_found, 422→validation_error"
+  - "Validation uses HTTP 422 (not 400) for semantic clarity"
+  - "validation-error condition integrates with Snooze error handling"
+  - "Error details field is optional, used for validation errors"
+
+testing_status:
+  unit_tests: "Good (response-tests.lisp covers format-error)"
+  integration_tests: "Good (integration-tests.lisp tests error scenarios)"
+  coverage_gaps:
+    - "Edge cases: empty message, nil details"
+    - "Error response schema not formally documented"
+
+related_features:
+  - response_helpers
+  - validation
+  - json_serialization
+  - routing
+
+evidence:
+  code: "src/response.lisp (format-error, status-to-error-type); src/validation.lisp (validation-error)"
+  docs: "README.md:135-146; examples show error handling"
+  tests: "tests/response-tests.lisp, tests/integration-tests.lisp"
+  examples: "examples/todo-api.lisp (not-found usage)"

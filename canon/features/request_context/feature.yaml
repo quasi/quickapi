@@ -1,0 +1,78 @@
+---
+name: request_context
+status: stable
+confidence: 0.90
+extraction_method: triangulation
+sources: [code, docs, examples]
+
+metadata:
+  tagline: "Access request data via special variables and automatic parameter binding"
+  category: core
+  added_in: "0.1.0"
+  stability: stable
+
+summary: |
+  Request context provides access to HTTP request data through special variables
+  and automatic binding mechanisms. The *request* variable holds the raw Snooze
+  request object, *body* contains the parsed JSON body for POST/PUT/PATCH requests,
+  and path parameters are automatically extracted and bound as lexical variables.
+
+purpose:
+  user_benefit: "Access request data without manual parsing or extraction"
+  problem_solved: "Boilerplate for accessing request headers, body, and URL parameters"
+  alternatives: "Direct Snooze request object access (more verbose)"
+
+key_capabilities:
+  - "*request* special variable for raw request access"
+  - "*body* special variable with auto-parsed JSON for POST/PUT/PATCH"
+  - "Automatic path parameter extraction from URI patterns"
+  - "Path parameters bound as lexical variables in handler scope"
+
+contracts:
+  - request-special-variable
+  - body-special-variable
+  - body-function
+  - path-parameter-auto-binding
+
+scenarios:
+  - access-request-object
+  - access-json-body-in-post
+  - use-path-parameter-in-handler
+  - multiple-path-parameters
+
+properties:
+  - body-auto-parsed-for-json-content-type
+  - body-nil-for-get-requests
+  - path-params-bound-as-symbols
+  - request-available-during-handler-execution
+
+dependencies:
+  required:
+    - snooze
+    - com.inuoe.jzon
+  optional: []
+
+implementation_notes:
+  - "*body* automatically populated for POST, PUT, PATCH with application/json"
+  - "Path parameters interned in :quickapi package"
+  - "parse-json-body called automatically by route macros"
+  - "path-param, query-param, header functions were planned but removed (stale exports)"
+
+testing_status:
+  unit_tests: "None (tested via integration)"
+  integration_tests: "Good (integration-tests.lisp)"
+  coverage_gaps:
+    - "Request header access (no helper currently)"
+    - "Query parameter access (no helper currently)"
+    - "Empty body handling"
+
+related_features:
+  - routing
+  - json_serialization
+  - validation
+
+evidence:
+  code: "src/package.lisp:65-70; src/core.lisp:174-209"
+  docs: "README.md:111-120"
+  tests: "tests/integration-tests.lisp"
+  examples: "examples/todo-api.lisp (uses *body* throughout)"

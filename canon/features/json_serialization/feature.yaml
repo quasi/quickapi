@@ -1,0 +1,92 @@
+---
+name: json_serialization
+status: stable
+confidence: 0.92
+extraction_method: triangulation
+sources: [code, docs, examples]
+
+metadata:
+  tagline: "Automatic JSON serialization for requests and responses"
+  category: core
+  added_in: "0.1.0"
+  stability: stable
+
+summary: |
+  JSON serialization is automatic for all route responses and request bodies.
+  Response values are automatically serialized to JSON. Request bodies for
+  POST/PUT/PATCH are automatically parsed from JSON to hash tables.
+
+purpose:
+  user_benefit: "No manual JSON parsing or stringification required"
+  problem_solved: "Boilerplate JSON handling code"
+  alternatives: "Manual calls to jzon:parse and jzon:stringify"
+
+key_capabilities:
+  - "Automatic response serialization (hash tables, lists, primitives)"
+  - "Automatic request body parsing (POST/PUT/PATCH)"
+  - "Content-type application/json for all responses"
+  - "Hash tables with string keys for JSON objects"
+
+contracts:
+  - (implicit in route macros)
+  - parse-json-body
+  - body
+
+scenarios:
+  - return-hash-table-as-json
+  - return-list-as-json-array
+  - parse-post-body-to-hash-table
+  - access-parsed-body-via-star-body
+
+properties:
+  - responses-always-json
+  - request-body-parsed-for-post-put-patch
+  - body-nil-for-get-delete
+  - json-objects-as-hash-tables
+
+dependencies:
+  required:
+    - com.inuoe.jzon
+  optional: []
+
+implementation_notes:
+  - "Uses com.inuoe.jzon (modern JSON library)"
+  - "Hash tables must use :test 'equal for string keys"
+  - "Serialization handled in define-json-route macro"
+  - "Only JSON supported - no XML, HTML, etc."
+
+testing_status:
+  unit_tests: "Implicit (tested through route tests)"
+  integration_tests: "Good (all examples use JSON)"
+  coverage_gaps:
+    - "Malformed JSON handling"
+    - "Non-JSON content-type requests"
+    - "Large payload handling"
+
+serialization_details:
+  supported_types:
+    - hash-table
+    - list
+    - string
+    - number
+    - boolean
+    - nil
+  unsupported_types:
+    - "Arbitrary CLOS objects (without custom serialization)"
+  content_type: "application/json; charset=utf-8"
+
+parsing_details:
+  trigger: "POST/PUT/PATCH with application/json content-type"
+  result: "Hash table with string keys"
+  binding: "*body* special variable"
+  error_handling: "Not explicitly tested"
+
+related_features:
+  - routing
+  - request_context
+  - response_helpers
+
+evidence:
+  code: "src/core.lisp:146-150 (parse-json-body), 196-209 (serialization)"
+  docs: "README.md:14, 114-120"
+  examples: "All examples return hash tables directly"

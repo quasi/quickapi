@@ -1,0 +1,74 @@
+---
+# Canon Manifest for quickAPI
+# Specification extracted via canon-initiate from working implementation
+
+meta:
+  system: quickAPI
+  tagline: "Build JSON APIs in Common Lisp with minimal boilerplate"
+  version: "0.1.0"
+  status: draft
+  canon_version: "0.2.0"
+  initiated_at: "2026-01-24"
+  extraction_method: multi-source-triangulation
+
+domain:
+  # quickAPI is a curated REST API framework for Common Lisp
+  # Thin, opinionated layer over Snooze (routing) and Hunchentoot (HTTP)
+  # Target: Small-to-medium JSON APIs with minimal infrastructure
+  purpose: "Enable rapid JSON API development in Common Lisp with minimal boilerplate"
+  target_users:
+    - Common Lisp developers building REST APIs
+    - Teams wanting FastAPI-like simplicity in Lisp
+    - Projects needing SQLite-backed JSON endpoints
+
+  non_goals:
+    - Heavy framework features (middleware, configuration files)
+    - Non-JSON content types
+    - Complex authentication/authorization
+    - Large-scale enterprise applications
+
+philosophy:
+  - "Thin veneer over proven libraries"
+  - "5 route macros, not 50 abstractions"
+  - "Automatic JSON, automatic validation, automatic errors"
+  - "Focus on business logic, not infrastructure"
+
+core_abstractions:
+  - API Definition (defapi macro)
+  - Route Macros (api-get, api-post, api-put, api-patch, api-delete)
+  - Request Context (*request*, *body*, path parameters)
+  - Response Helpers (ok, created, not-found, etc.)
+  - Validation Framework (validate macro + checks)
+  - Database Helpers (with-db, ensure-table, etc.)
+
+dependencies:
+  required:
+    - snooze: "CLOS-based HTTP routing (~850 LoC)"
+    - hunchentoot: "HTTP server"
+    - com.inuoe.jzon: "Modern JSON library"
+    - cl-ppcre: "Regex for validation"
+  optional:
+    - sqlite: "Database operations"
+
+features:
+  - routing
+  - json_serialization
+  - validation
+  - request_context
+  - response_helpers
+  - sqlite_integration
+  - error_handling
+
+structure:
+  foundation:
+    - vocabulary
+    - ontology
+
+  features:
+    - routing
+    - json_serialization
+    - validation
+    - request_context
+    - response_helpers
+    - sqlite_integration
+    - error_handling

@@ -34,6 +34,7 @@ proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent doc
                              (:file "response-tests")
                              (:file "validation-tests")
                              (:file "route-registry-tests")
+                             (:file "json-parsing-tests")
                              (:file "sqlite-tests")
                              (:file "integration-tests")
                              (:file "tests"))))

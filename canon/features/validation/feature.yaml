@@ -1,0 +1,98 @@
+---
+name: validation
+status: stable
+confidence: 0.97
+extraction_method: triangulation
+sources: [code, docs, tests, examples]
+
+metadata:
+  tagline: "Validate request data with automatic error collection and 422 responses"
+  category: core
+  added_in: "0.1.0"
+  stability: stable
+
+summary: |
+  Validation framework provides a `validate` macro and five validator functions
+  for checking request data. Validators collect all errors before signaling a
+  standardized HTTP 422 response, providing better UX than fail-fast validation.
+
+purpose:
+  user_benefit: "Ensure request data meets constraints with minimal code"
+  problem_solved: "Manual validation logic and inconsistent error responses"
+  alternatives: "Manual checks with ad-hoc error handling"
+
+key_capabilities:
+  - "validate macro for declarative validation"
+  - "Five validators: require-fields, require-type, require-length, require-range, require-pattern"
+  - "Error collection (non-fail-fast)"
+  - "Standardized 422 error responses"
+  - "Automatic validation error formatting"
+
+contracts:
+  - validate
+  - require-fields
+  - require-type
+  - require-length
+  - require-range
+  - require-pattern
+  - validation-error
+
+scenarios:
+  - validate-required-fields
+  - validate-field-types
+  - validate-string-length
+  - validate-numeric-range
+  - validate-regex-pattern
+  - collect-multiple-validation-errors
+
+properties:
+  - validation-errors-collected-not-fail-fast
+  - validation-signals-http-422
+  - empty-string-treated-as-missing
+  - nil-values-skip-type-checks
+  - validation-error-format-standardized
+
+dependencies:
+  required:
+    - cl-ppcre
+    - snooze
+  optional: []
+
+implementation_notes:
+  - "Validation designed 'simple validation without DSL' (ABOUTME comment)"
+  - "Uses *validation-errors* special variable for collection"
+  - "Each validator takes data hash-table as first argument"
+
+testing_status:
+  unit_tests: "Excellent (20+ tests)"
+  integration_tests: "Good (used in todo-api example)"
+  coverage_gaps: []
+
+validation_semantics:
+  empty_string: "Treated as missing for require-fields"
+  nil_values: "Skipped for type/length/range checks (allows optional fields)"
+  type_checking: "Supports string, number, integer, boolean, list, hash-table"
+  pattern_matching: "Uses cl-ppcre:scan for regex validation"
+
+error_format:
+  status: 422
+  structure: |
+    {
+      "error": "validation_error",
+      "message": "Validation failed",
+      "details": [
+        {"field": "name", "message": "required"},
+        {"field": "age", "message": "must be at least 0"}
+      ]
+    }
+
+related_features:
+  - request_context
+  - error_handling
+  - json_serialization
+
+evidence:
+  code: "src/validation.lisp (all)"
+  docs: "README.md:123-133; docs/02-tutorial.md"
+  tests: "tests/validation-tests.lisp (20+ tests)"
+  examples: "examples/todo-api.lisp:74-77, 92-94"
