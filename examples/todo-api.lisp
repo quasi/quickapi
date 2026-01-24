@@ -61,7 +61,8 @@
       (mapcar #'todo-to-hash rows))))
 
 ;; Get a single todo by ID
-(api-get "/todos/:id" (id)
+;; Note: 'id' is automatically bound from the :id path parameter
+(api-get "/todos/:id" ()
   (with-db (*db-path*)
     (let ((rows (sqlite:select *db* :todos :where `(:= :id ,id))))
       (if rows
@@ -86,7 +87,8 @@
         (created (todo-to-hash (first rows)))))))
 
 ;; Update a todo
-(api-put "/todos/:id" (id)
+;; Note: 'id' is automatically bound from the :id path parameter
+(api-put "/todos/:id" ()
   (validate *body*
     (require-type "title" 'string)
     (require-type "completed" 'boolean))
@@ -117,7 +119,8 @@
       (todo-to-hash (first rows)))))
 
 ;; Delete a todo
-(api-delete "/todos/:id" (id)
+;; Note: 'id' is automatically bound from the :id path parameter
+(api-delete "/todos/:id" ()
   (with-db (*db-path*)
     (let ((rows (sqlite:select *db* :todos :where `(:= :id ,id))))
       (unless rows
@@ -126,7 +129,8 @@
       (no-content))))
 
 ;; Toggle todo completion status
-(api-post "/todos/:id/toggle" (id)
+;; Note: 'id' is automatically bound from the :id path parameter
+(api-post "/todos/:id/toggle" ()
   (with-db (*db-path*)
     (let ((rows (sqlite:select *db* :todos :where `(:= :id ,id))))
       (unless rows

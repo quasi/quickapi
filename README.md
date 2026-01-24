@@ -95,9 +95,17 @@ Expected response:
 
 ### Path parameters
 
+Path parameters (like `:id`) are automatically extracted and bound as variables in your route body:
+
 ```lisp
-(api-get "/users/:id" (id)
+(api-get "/users/:id" ()
+  ;; 'id' is automatically bound from the :id path parameter
   (find-user id))
+
+;; Multiple path parameters work too
+(api-get "/users/:user-id/posts/:post-id" ()
+  ;; Both 'user-id' and 'post-id' are automatically bound
+  (find-post user-id post-id))
 ```
 
 ### Request body (POST/PUT/PATCH)
@@ -127,7 +135,8 @@ If validation fails, an automatic 400 response is sent with error details.
 ### Error responses
 
 ```lisp
-(api-get "/todos/:id" (id)
+(api-get "/todos/:id" ()
+  ;; 'id' is automatically bound from the path
   (let ((todo (find-todo id)))
     (if todo
         todo

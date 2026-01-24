@@ -7,6 +7,9 @@
    #:defapi
    #:start
    #:stop
+   #:api-name
+   #:api-version
+   #:api-description
 
    ;; Route macros (thin veneer over Snooze)
    #:api-get
@@ -45,6 +48,11 @@
    ;; Database (re-exports from sqlite)
    #:*db*
    #:with-db
+   #:ensure-table
+   #:last-insert-id
+   #:row-to-hash
+   #:rows-to-json
+   #:with-transaction
 
    ;; Re-exports from Snooze
    #:http-condition

@@ -42,7 +42,8 @@
            (,data-var ,data))
        (declare (ignorable ,data-var))
        ,@(mapcar (lambda (check)
-                   `(,@check ,data-var))
+                   ;; Insert data as first arg after function name
+                   `(,(car check) ,data-var ,@(cdr check)))
                  checks)
        (when *validation-errors*
          (signal-validation-error)))))
@@ -61,14 +62,14 @@
 ;;; Each takes the data hash-table as its last argument
 
 (defun require-fields (data &rest fields)
-  "Check that all FIELDS are present and non-nil in DATA."
+  "Check that all FIELDS are present and non-nil in DATA hash-table."
   (dolist (field fields)
     (let ((value (gethash field data)))
       (when (or (null value)
                 (and (stringp value) (string= value "")))
         (add-validation-error field "required")))))
 
-(defun require-type (field expected-type data)
+(defun require-type (data field expected-type)
   "Check that FIELD in DATA has the EXPECTED-TYPE.
    Supported types: string, number, integer, boolean, list, hash-table."
   (let ((value (gethash field data)))
@@ -85,7 +86,7 @@
         (add-validation-error field
           (format nil "must be ~(~a~)" expected-type))))))
 
-(defun require-length (field data &key min max)
+(defun require-length (data field &key min max)
   "Check that the length of FIELD in DATA is within bounds.
    Works for strings, lists, and vectors."
   (let ((value (gethash field data)))
@@ -103,7 +104,7 @@
             (add-validation-error field
               (format nil "must be at most ~a characters" max))))))))
 
-(defun require-range (field data &key min max)
+(defun require-range (data field &key min max)
   "Check that the numeric value of FIELD in DATA is within bounds."
   (let ((value (gethash field data)))
     (when (and value (numberp value))
@@ -114,7 +115,7 @@
         (add-validation-error field
           (format nil "must be at most ~a" max))))))
 
-(defun require-pattern (field pattern data)
+(defun require-pattern (data field pattern)
   "Check that FIELD in DATA matches the regex PATTERN."
   (let ((value (gethash field data)))
     (when (and value (stringp value))

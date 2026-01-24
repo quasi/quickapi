@@ -1,7 +1,7 @@
 ;;;; ABOUTME: Test package definitions for quickapi
 
 (defpackage :quickapi/tests
-  (:use :cl)
+  (:use :cl :quickapi)
   (:local-nicknames (:5am :fiveam)
                     (:qa :quickapi))
   (:export #:quickapi-tests

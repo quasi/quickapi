@@ -21,7 +21,8 @@
     response))
 
 ;;; GET with path parameter
-(api-get "/greet/:name" (name)
+;;; Note: 'name' is automatically bound from the :name path parameter
+(api-get "/greet/:name" ()
   (let ((response (make-hash-table :test 'equal)))
     (setf (gethash "message" response) (format nil "Hello, ~a!" name))
     response))

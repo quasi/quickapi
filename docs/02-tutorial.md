@@ -164,10 +164,11 @@ Expected output:
 
 ## Step 6: Get Single Todo (GET /todos/:id)
 
-Add the get-by-id endpoint:
+Add the get-by-id endpoint. Note that `id` is automatically bound from the `:id` path parameter:
 
 ```lisp
-(api-get "/todos/:id" (id)
+(api-get "/todos/:id" ()
+  ;; 'id' is automatically bound from the :id path parameter
   (with-db (*db-path*)
     (let ((rows (sqlite:select *db* :todos :where `(:= :id ,id))))
       (if rows
@@ -201,10 +202,11 @@ Expected output:
 
 ## Step 7: Update Todo (PUT /todos/:id)
 
-Add the update endpoint:
+Add the update endpoint. Path parameters like `id` are automatically bound:
 
 ```lisp
-(api-put "/todos/:id" (id)
+(api-put "/todos/:id" ()
+  ;; 'id' is automatically bound from the :id path parameter
   (with-db (*db-path*)
     ;; Check todo exists
     (unless (sqlite:select *db* :todos :where `(:= :id ,id))
@@ -247,7 +249,8 @@ Expected output:
 Add the delete endpoint:
 
 ```lisp
-(api-delete "/todos/:id" (id)
+(api-delete "/todos/:id" ()
+  ;; 'id' is automatically bound from the :id path parameter
   (with-db (*db-path*)
     (unless (sqlite:select *db* :todos :where `(:= :id ,id))
       (not-found "Todo not found"))
@@ -298,10 +301,11 @@ See `examples/todo-api.lisp` for the complete implementation.
 
 ## What You Learned
 
-- Defining routes with `GET`, `POST`, `PUT`, `DELETE`
+- Defining routes with `api-get`, `api-post`, `api-put`, `api-delete`
+- Path parameters (`:id`) are automatically bound as variables
 - Accessing JSON body with `*body*`
 - Validating requests with `validate` and `require-*` functions
-- Using SQLite with `with-db` and cl-sqlite functions
+- Using SQLite with `with-db`, `ensure-table`, and `last-insert-id`
 - Returning errors with `not-found` and `bad-request`
 - Returning success with `ok`, `created`, and `no-content`
 

@@ -41,35 +41,35 @@
   "Test require-type accepts valid string"
   (let ((data (make-test-data "name" "Alice")))
     (let ((qa::*validation-errors* nil))
-      (qa::require-type "name" 'string data)
+      (qa::require-type data "name" 'string)
       (5am:is (null qa::*validation-errors*)))))
 
 (5am:test require-type-string-invalid
   "Test require-type rejects non-string"
   (let ((data (make-test-data "name" 123)))
     (let ((qa::*validation-errors* nil))
-      (qa::require-type "name" 'string data)
+      (qa::require-type data "name" 'string)
       (5am:is (= 1 (length qa::*validation-errors*))))))
 
 (5am:test require-type-number-valid
   "Test require-type accepts valid number"
   (let ((data (make-test-data "age" 25)))
     (let ((qa::*validation-errors* nil))
-      (qa::require-type "age" 'number data)
+      (qa::require-type data "age" 'number)
       (5am:is (null qa::*validation-errors*)))))
 
 (5am:test require-type-integer-valid
   "Test require-type accepts valid integer"
   (let ((data (make-test-data "count" 42)))
     (let ((qa::*validation-errors* nil))
-      (qa::require-type "count" 'integer data)
+      (qa::require-type data "count" 'integer)
       (5am:is (null qa::*validation-errors*)))))
 
 (5am:test require-type-boolean-valid
   "Test require-type accepts valid boolean"
   (let ((data (make-test-data "active" t)))
     (let ((qa::*validation-errors* nil))
-      (qa::require-type "active" 'boolean data)
+      (qa::require-type data "active" 'boolean)
       (5am:is (null qa::*validation-errors*)))))
 
 ;;; REQUIRE-LENGTH Tests
@@ -78,35 +78,35 @@
   "Test require-length accepts string meeting minimum"
   (let ((data (make-test-data "name" "Alice")))
     (let ((qa::*validation-errors* nil))
-      (qa::require-length "name" data :min 3)
+      (qa::require-length data "name" :min 3)
       (5am:is (null qa::*validation-errors*)))))
 
 (5am:test require-length-min-invalid
   "Test require-length rejects string below minimum"
   (let ((data (make-test-data "name" "Al")))
     (let ((qa::*validation-errors* nil))
-      (qa::require-length "name" data :min 3)
+      (qa::require-length data "name" :min 3)
       (5am:is (= 1 (length qa::*validation-errors*))))))
 
 (5am:test require-length-max-valid
   "Test require-length accepts string meeting maximum"
   (let ((data (make-test-data "name" "Alice")))
     (let ((qa::*validation-errors* nil))
-      (qa::require-length "name" data :max 10)
+      (qa::require-length data "name" :max 10)
       (5am:is (null qa::*validation-errors*)))))
 
 (5am:test require-length-max-invalid
   "Test require-length rejects string exceeding maximum"
   (let ((data (make-test-data "name" "Verylongname")))
     (let ((qa::*validation-errors* nil))
-      (qa::require-length "name" data :max 10)
+      (qa::require-length data "name" :max 10)
       (5am:is (= 1 (length qa::*validation-errors*))))))
 
 (5am:test require-length-range-valid
   "Test require-length with both min and max"
   (let ((data (make-test-data "name" "Alice")))
     (let ((qa::*validation-errors* nil))
-      (qa::require-length "name" data :min 3 :max 10)
+      (qa::require-length data "name" :min 3 :max 10)
       (5am:is (null qa::*validation-errors*)))))
 
 ;;; REQUIRE-RANGE Tests
@@ -115,28 +115,28 @@
   "Test require-range accepts number meeting minimum"
   (let ((data (make-test-data "age" 25)))
     (let ((qa::*validation-errors* nil))
-      (qa::require-range "age" data :min 18)
+      (qa::require-range data "age" :min 18)
       (5am:is (null qa::*validation-errors*)))))
 
 (5am:test require-range-min-invalid
   "Test require-range rejects number below minimum"
   (let ((data (make-test-data "age" 15)))
     (let ((qa::*validation-errors* nil))
-      (qa::require-range "age" data :min 18)
+      (qa::require-range data "age" :min 18)
       (5am:is (= 1 (length qa::*validation-errors*))))))
 
 (5am:test require-range-max-valid
   "Test require-range accepts number meeting maximum"
   (let ((data (make-test-data "score" 95)))
     (let ((qa::*validation-errors* nil))
-      (qa::require-range "score" data :max 100)
+      (qa::require-range data "score" :max 100)
       (5am:is (null qa::*validation-errors*)))))
 
 (5am:test require-range-max-invalid
   "Test require-range rejects number exceeding maximum"
   (let ((data (make-test-data "score" 105)))
     (let ((qa::*validation-errors* nil))
-      (qa::require-range "score" data :max 100)
+      (qa::require-range data "score" :max 100)
       (5am:is (= 1 (length qa::*validation-errors*))))))
 
 ;;; REQUIRE-PATTERN Tests
@@ -145,14 +145,14 @@
   "Test require-pattern accepts matching string"
   (let ((data (make-test-data "email" "alice@example.com")))
     (let ((qa::*validation-errors* nil))
-      (qa::require-pattern "email" "^[^@]+@[^@]+\\.[^@]+$" data)
+      (qa::require-pattern data "email" "^[^@]+@[^@]+\\.[^@]+$")
       (5am:is (null qa::*validation-errors*)))))
 
 (5am:test require-pattern-invalid
   "Test require-pattern rejects non-matching string"
   (let ((data (make-test-data "email" "not-an-email")))
     (let ((qa::*validation-errors* nil))
-      (qa::require-pattern "email" "^[^@]+@[^@]+\\.[^@]+$" data)
+      (qa::require-pattern data "email" "^[^@]+@[^@]+\\.[^@]+$")
       (5am:is (= 1 (length qa::*validation-errors*))))))
 
 ;;; VALIDATE Macro Integration Tests
