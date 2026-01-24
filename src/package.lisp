@@ -22,9 +22,6 @@
    #:*request*
    #:*body*
    #:body
-   #:path-param
-   #:query-param
-   #:header
 
    ;; Response helpers
    #:ok
