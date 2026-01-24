@@ -1,4 +1,4 @@
-;;;; ABOUTME: Core route macros for quickapi - thin DSL layer over Snooze
+;;;; ABOUTME: Core route macros for quickapi - thin DSL layer over Clack/Lack
 
 (in-package :quickapi)
 
@@ -8,7 +8,7 @@
   "The current API instance. Set by DEFAPI.")
 
 (defvar *server* nil
-  "The running Hunchentoot acceptor.")
+  "The running Clack handler.")
 
 (defvar *route-registry* (make-hash-table :test 'equal)
   "Registry of route patterns to resource names for URI matching.")
@@ -16,25 +16,32 @@
 (defclass api ()
   ((name :initarg :name :accessor api-name)
    (version :initarg :version :accessor api-version :initform "1.0")
-   (description :initarg :description :accessor api-description :initform nil))
+   (description :initarg :description :accessor api-description :initform nil)
+   (middlewares :initarg :middlewares :accessor api-middlewares :initform nil))
   (:documentation "An API definition containing metadata."))
 
-(defmacro defapi (symbol-name &key name (version "1.0") description)
-  "Define an API with the given SYMBOL-NAME, optional :NAME, VERSION, and DESCRIPTION.
-   SYMBOL-NAME is used as the API identifier.
-   :NAME is an optional display name (defaults to SYMBOL-NAME as string).
-   This sets up the API metadata and prepares for route definitions.
+(defmacro defapi (symbol-name &key name (version "1.0") description middlewares)
+  "Define an API with the given SYMBOL-NAME, optional :NAME, VERSION, DESCRIPTION,
+   and MIDDLEWARES.
+
+   MIDDLEWARES is a list of middleware specifications:
+   - :accesslog - Request logging
+   - :session - Session management
+   - :backtrace - Error backtraces in development
+   - (:cors :origins '(\"*\")) - CORS with options
 
    Example:
      (defapi my-api
        :name \"My API\"
        :version \"1.0\"
-       :description \"A sample API\")"
+       :description \"A sample API\"
+       :middlewares (:accesslog :session))"
   `(progn
      (setf *api* (make-instance 'api
                                 :name ,(or name (string symbol-name))
                                 :version ,version
-                                :description ,description))
+                                :description ,description
+                                :middlewares ',middlewares))
      *api*))
 
 ;;; Route Registry and URI Matching
@@ -42,7 +49,7 @@
 (defstruct route-entry
   "Entry in the route registry."
   (pattern nil :type string)           ; Original URI pattern like "/todos/:id"
-  (resource-name nil :type symbol)     ; Snooze resource name
+  (resource-name nil :type symbol)     ; Unique route identifier
   (segments nil :type list)            ; Parsed segments: (:literal . "todos") or (:param . id)
   (method nil :type keyword))          ; HTTP method
 
@@ -70,8 +77,9 @@ Param symbols are interned in the QUICKAPI package for consistency."
 (defun match-uri-to-route (uri method)
   "Match a request URI to a registered route.
 Returns (values resource-name extracted-args) or NIL."
-  (let* ((uri-obj (quri:uri uri))
-         (path (quri:uri-path uri-obj))
+  ;; Strip query string if present
+  (let* ((path (let ((qpos (position #\? uri)))
+                 (if qpos (subseq uri 0 qpos) uri)))
          (uri-segments (remove-if (lambda (s) (zerop (length s)))
                                   (cl-ppcre:split "/" path))))
     ;; Try to find a matching route
@@ -98,56 +106,35 @@ Returns (values resource-name extracted-args) or NIL."
              *route-registry*)
     nil))
 
-(defun quickapi-resource-name (uri)
-  "Custom resource name function for quickapi.
-Matches URI against registered route patterns."
-  (let* ((uri-obj (quri:uri uri))
-         (path (quri:uri-path uri-obj))
-         (query (quri:uri-query uri-obj)))
-    ;; Try each HTTP method (we'll refine based on actual request later)
-    (dolist (method '(:get :post :put :patch :delete))
-      (multiple-value-bind (resource-name args)
-          (match-uri-to-route uri method)
-        (when resource-name
-          ;; Return resource name and remaining URI (query string only)
-          (return-from quickapi-resource-name
-            (values (string-downcase (symbol-name resource-name))
-                    (if query (format nil "?~a" query) ""))))))
-    ;; Fallback to Snooze's default
-    (snooze::default-resource-name uri)))
+;;; Server Start/Stop
 
-(defun start (&key (port 8000) (address "0.0.0.0"))
+(defun start (&key (port 8000) (address "0.0.0.0") (server :hunchentoot))
   "Start the API server on PORT (default 8000).
-   Uses Hunchentoot as the backend."
+   SERVER can be :hunchentoot (default) or :woo (faster, async)."
   (when *server*
     (stop))
-  ;; Create and start hunchentoot acceptor
-  (let ((acceptor (make-instance 'hunchentoot:easy-acceptor
-                                 :port port
-                                 :address address)))
-    ;; Install snooze as the dispatcher with our custom resource name function
-    (setf hunchentoot:*dispatch-table*
-          (list (snooze:make-hunchentoot-app
-                 `((snooze:*resource-name-function* . ,#'quickapi-resource-name)))))
-    (hunchentoot:start acceptor)
-    (setf *server* acceptor)
+  (let* ((base-app (make-quickapi-app))
+         (middlewares (when *api* (api-middlewares *api*)))
+         (app (if middlewares
+                  (build-app-with-middleware base-app middlewares)
+                  base-app)))
+    (setf *server* (clack:clackup app
+                                   :port port
+                                   :address address
+                                   :server server
+                                   :use-thread t
+                                   :silent t))
     (format t "~&Server started on http://~a:~a/~%" address port)
     *server*))
 
 (defun stop ()
   "Stop the running API server."
   (when *server*
-    (hunchentoot:stop *server*)
+    (clack:stop *server*)
     (setf *server* nil)
     (format t "~&Server stopped~%")))
 
 ;;; Request Context Helpers
-
-(defun parse-json-body ()
-  "Parse the JSON body from the current request."
-  (let ((body-string (snooze:payload-as-string)))
-    (when (and body-string (plusp (length body-string)))
-      (com.inuoe.jzon:parse body-string))))
 
 (defun body ()
   "Get the parsed JSON body of the current request.
@@ -155,11 +142,7 @@ Matches URI against registered route patterns."
   *body*)
 
 ;;; Route Definition Macros
-;;; These are thin wrappers around snooze:defroute that:
-;;; 1. Set up JSON content type
-;;; 2. Parse JSON body for POST/PUT/PATCH
-;;; 3. Bind *body*
-;;; 4. Auto-serialize response to JSON
+;;; These define routes as closures stored in the handler registry
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun generate-resource-name (uri method)
@@ -171,15 +154,28 @@ E.g., /todos/:id with GET -> TODOS/:ID/GET"
                              method)))
       (intern name-str :quickapi))))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun extract-auth-option (lambda-list)
+    "Extract :auth option from route lambda-list.
+     Returns (values auth-type remaining-options).
+     E.g., (:auth :jwt) -> :jwt"
+    (let ((auth-pos (position :auth lambda-list)))
+      (if (and auth-pos (< (1+ auth-pos) (length lambda-list)))
+          (elt lambda-list (1+ auth-pos))
+          nil))))
+
 (defmacro define-json-route (method uri lambda-list &body body)
-  "Internal macro to define a JSON route. Used by GET, POST, etc.
+  "Internal macro to define a JSON route.
 
    Path parameters are extracted from URI (e.g., :id from /users/:id).
-   The LAMBDA-LIST is deprecated - path params are auto-extracted.
-   If both are provided, LAMBDA-LIST is ignored to prevent duplicates."
-  (declare (ignore lambda-list))
-  (let* ((resource-name (generate-resource-name uri method))
-         (has-body-p (member method '(:post :put :patch)))
+   The route handler is stored as a closure that binds path params as local variables.
+
+   LAMBDA-LIST can contain :auth option:
+     (:auth :jwt)     - Require JWT authentication
+     (:auth :session) - Require session authentication
+     (:auth :api-key) - Require API key authentication"
+  (let* ((auth-type (extract-auth-option lambda-list))
+         (resource-name (generate-resource-name uri method))
          ;; Parse URI segments
          (parsed-segments (parse-uri-pattern uri))
          ;; Extract path parameter names in order
@@ -190,28 +186,44 @@ E.g., /todos/:id with GET -> TODOS/:ID/GET"
        ;; Register the route pattern for URI matching
        (register-route ,uri ',resource-name ,method)
 
-       ;; Define the Snooze route
-       (snooze:defroute ,resource-name
-           (,method "application/json" ,@path-params)
-         (let ((*body* ,(when has-body-p '(parse-json-body))))
-           (let ((result (progn ,@body)))
-             (typecase result
-               ;; Already a proper response (list of status, headers, body)
-               (cons (if (and (integerp (first result))
-                              (listp (second result)))
-                         ;; It's a full response - extract just the body
-                         (values (third (first (third result)))
-                                 (first result)
-                                 "application/json")
-                         ;; It's data - serialize to JSON
-                         (values (com.inuoe.jzon:stringify result) 200 "application/json")))
-               ;; Hash-table or other data - serialize to JSON
-               (t (values (com.inuoe.jzon:stringify result) 200 "application/json")))))))))
+       ;; Register the handler as a closure with auth info
+       (register-handler ,method ,uri
+         (lambda (env params)
+           (declare (ignorable env))
+           ;; Bind path parameters from the matched params alist
+           (let (,@(loop for param in path-params
+                         collect `(,param (cdr (assoc ',param params)))))
+             (let ((result (progn ,@body)))
+               ;; Convert result to Lack response format
+               (response-to-lack result))))
+         ,auth-type))))
+
+(defun response-to-lack (result)
+  "Convert a route handler result to Lack response format (status headers body)."
+  (typecase result
+    ;; Already a proper response (list of status, headers, body)
+    (cons (if (and (integerp (first result))
+                   (listp (second result)))
+              ;; It's a full response - use as-is
+              result
+              ;; It's data - serialize to JSON
+              (list 200
+                    '(:content-type "application/json; charset=utf-8")
+                    (list (com.inuoe.jzon:stringify result)))))
+    ;; Hash-table or other data - serialize to JSON
+    (t (list 200
+             '(:content-type "application/json; charset=utf-8")
+             (list (com.inuoe.jzon:stringify result))))))
 
 (defmacro api-get (uri (&rest lambda-list) &body body)
   "Define a GET route. Response body is automatically JSON-encoded.
    Path parameters (e.g., :id in /users/:id) are auto-extracted and
    bound as variables in BODY.
+
+   Options in lambda-list:
+     :auth :jwt     - Require JWT authentication
+     :auth :session - Require session authentication
+     :auth :api-key - Require API key authentication
 
    Example:
      (api-get \"/users\" ()
@@ -219,13 +231,21 @@ E.g., /todos/:id with GET -> TODOS/:ID/GET"
 
      (api-get \"/users/:id\" ()
        ;; id is automatically bound from the path
-       (find-user id))"
-  (declare (ignore lambda-list))
-  `(define-json-route :get ,uri () ,@body))
+       (find-user id))
+
+     (api-get \"/profile\" (:auth :jwt)
+       ;; *current-user* bound to JWT claims
+       (ok *current-user*))"
+  `(define-json-route :get ,uri ,lambda-list ,@body))
 
 (defmacro api-post (uri (&rest lambda-list) &body body)
   "Define a POST route. *body* is bound to parsed JSON request body.
    Path parameters are auto-extracted. Response is automatically JSON-encoded.
+
+   Options in lambda-list:
+     :auth :jwt     - Require JWT authentication
+     :auth :session - Require session authentication
+     :auth :api-key - Require API key authentication
 
    Example:
      (api-post \"/users\" ()
@@ -233,42 +253,53 @@ E.g., /todos/:id with GET -> TODOS/:ID/GET"
          (require-fields \"name\" \"email\"))
        (create-user *body*))
 
-     (api-post \"/users/:id/activate\" ()
-       ;; id is automatically bound from the path
-       (activate-user id))"
-  (declare (ignore lambda-list))
-  `(define-json-route :post ,uri () ,@body))
+     (api-post \"/todos\" (:auth :jwt)
+       ;; Protected route - *current-user* available
+       (create-todo *body*))"
+  `(define-json-route :post ,uri ,lambda-list ,@body))
 
 (defmacro api-put (uri (&rest lambda-list) &body body)
   "Define a PUT route. *body* is bound to parsed JSON request body.
    Path parameters are auto-extracted. Response is automatically JSON-encoded.
 
+   Options in lambda-list:
+     :auth :jwt     - Require JWT authentication
+     :auth :session - Require session authentication
+     :auth :api-key - Require API key authentication
+
    Example:
-     (api-put \"/users/:id\" ()
+     (api-put \"/users/:id\" (:auth :jwt)
        ;; id is automatically bound from the path
        (update-user id *body*))"
-  (declare (ignore lambda-list))
-  `(define-json-route :put ,uri () ,@body))
+  `(define-json-route :put ,uri ,lambda-list ,@body))
 
 (defmacro api-patch (uri (&rest lambda-list) &body body)
   "Define a PATCH route. *body* is bound to parsed JSON request body.
    Path parameters are auto-extracted. Response is automatically JSON-encoded.
 
+   Options in lambda-list:
+     :auth :jwt     - Require JWT authentication
+     :auth :session - Require session authentication
+     :auth :api-key - Require API key authentication
+
    Example:
-     (api-patch \"/users/:id\" ()
+     (api-patch \"/users/:id\" (:auth :session)
        ;; id is automatically bound from the path
        (partial-update-user id *body*))"
-  (declare (ignore lambda-list))
-  `(define-json-route :patch ,uri () ,@body))
+  `(define-json-route :patch ,uri ,lambda-list ,@body))
 
 (defmacro api-delete (uri (&rest lambda-list) &body body)
   "Define a DELETE route. Path parameters are auto-extracted.
    Response is automatically JSON-encoded.
 
+   Options in lambda-list:
+     :auth :jwt     - Require JWT authentication
+     :auth :session - Require session authentication
+     :auth :api-key - Require API key authentication
+
    Example:
-     (api-delete \"/users/:id\" ()
+     (api-delete \"/users/:id\" (:auth :jwt)
        ;; id is automatically bound from the path
        (delete-user id)
        (no-content))"
-  (declare (ignore lambda-list))
-  `(define-json-route :delete ,uri () ,@body))
+  `(define-json-route :delete ,uri ,lambda-list ,@body))

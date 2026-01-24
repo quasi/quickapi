@@ -11,7 +11,7 @@
    #:api-version
    #:api-description
 
-   ;; Route macros (thin veneer over Snooze)
+   ;; Route macros
    #:api-get
    #:api-post
    #:api-put
@@ -51,16 +51,33 @@
    #:rows-to-json
    #:with-transaction
 
-   ;; Re-exports from Snooze
+   ;; Models
+   #:defmodel
+   #:migrate-models
+   #:*models*
+
+   ;; HTTP conditions
+   #:http-error
    #:http-condition
-   #:defroute))
+
+   ;; Authentication
+   #:*current-user*
+   #:*jwt-secret*
+   #:*jwt-algorithm*
+   #:*session-user-loader*
+   #:*api-key-validator*
+   #:generate-jwt
+   #:verify-jwt
+   #:hash-password
+   #:verify-password
+   #:session-get))
 
 (in-package :quickapi)
 
 ;;; Special variables for request context
 
 (defvar *request* nil
-  "The current Snooze request object. Bound during request handling.")
+  "The current Lack request env. Bound during request handling.")
 
 (defvar *body* nil
   "Parsed JSON body of the current request. Automatically parsed for

@@ -9,11 +9,16 @@
 makes it in Python. It's not a framework - it's a carefully curated combination of
 proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent documentation."
 
-  :depends-on ("snooze"           ; CLOS-based routing, ~850 LoC
-               "hunchentoot"     ; HTTP server
+  :depends-on ("clack"            ; HTTP server abstraction
+               "lack"             ; Middleware framework
+               "lack-request"     ; Request parsing
+               "lack-response"    ; Response utilities
                "com.inuoe.jzon"  ; Modern JSON library
                "cl-ppcre"        ; Regex for validation
-               "sqlite")         ; cl-sqlite for database
+               "sqlite"          ; cl-sqlite for database
+               "jose"            ; JWT/JOSE implementation
+               "ironclad"        ; Cryptography for password hashing
+               "cl-base64")      ; Base64 encoding for password storage
 
   :serial t
   :components ((:module "src"
@@ -21,8 +26,11 @@ proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent doc
                 :components ((:file "package")
                              (:file "response")
                              (:file "validation")
+                             (:file "auth")
+                             (:file "lack-app")
                              (:file "core")
-                             (:file "sqlite"))))
+                             (:file "sqlite")
+                             (:file "models"))))
 
   :in-order-to ((test-op (test-op "quickapi/tests"))))
 
@@ -36,6 +44,8 @@ proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent doc
                              (:file "route-registry-tests")
                              (:file "json-parsing-tests")
                              (:file "sqlite-tests")
+                             (:file "model-tests")
+                             (:file "auth-tests")
                              (:file "integration-tests")
                              (:file "tests"))))
   :perform (test-op (o c)
