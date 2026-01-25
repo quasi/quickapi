@@ -169,7 +169,7 @@
 (5am:test validate-macro-signal-error
   "Test VALIDATE macro signals condition on validation failure"
   (let ((data (make-test-data "name" "")))
-    (5am:signals snooze:http-condition
+    (5am:signals qa:validation-error
       (qa:validate data
         (require-fields "name" "email")))))
 
@@ -180,7 +180,7 @@
         (qa:validate data
           (require-fields "name" "email")
           (require-range "age" :min 0))
-      (snooze:http-condition ()
+      (qa:validation-error ()
         ;; Expected - multiple validation errors should be collected
         (5am:pass))
       (:no-error ()

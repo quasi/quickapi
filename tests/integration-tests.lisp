@@ -74,7 +74,7 @@
                   (setf (gethash "name" h) "")
                   (setf (gethash "age" h) -5)
                   h)))
-    (5am:signals snooze:http-condition
+    (5am:signals qa:validation-error
       (qa:validate qa:*body*
         (require-fields "name" "age")
         (require-range "age" :min 0 :max 150)))))
@@ -114,7 +114,7 @@
 
 (5am:test error-handling-not-found
   "Test NOT-FOUND error handling in API context"
-  (5am:signals snooze:http-condition
+  (5am:signals qa:http-error
     (qa:with-db (":memory:")
       (qa::ensure-table :items '((id integer :primary-key)))
       (let ((rows (sqlite:execute-to-list qa:*db* "SELECT * FROM items WHERE id = ?" 999)))
@@ -123,7 +123,7 @@
 
 (5am:test error-handling-bad-request
   "Test BAD-REQUEST error handling"
-  (5am:signals snooze:http-condition
+  (5am:signals qa:http-error
     (let ((qa:*body* (make-hash-table :test 'equal)))
       (when (zerop (hash-table-count qa:*body*))
         (qa:bad-request "Empty request body")))))

@@ -33,8 +33,17 @@
 ;;; Password Hashing (PBKDF2-SHA256 via Ironclad)
 ;;; ============================================================================
 
-(defconstant +pbkdf2-iterations+ 100000
-  "Number of PBKDF2 iterations. OWASP 2023 recommends 100000 for SHA256.")
+(defvar *pbkdf2-iterations* 100000
+  "Number of PBKDF2 iterations.
+   Production: 100000 (OWASP 2023 recommendation for SHA256)
+   Development: 1000 (fast enough for testing)
+   Automatically reduced in debug mode.")
+
+(defconstant +pbkdf2-iterations-production+ 100000
+  "Production iteration count. OWASP 2023 recommends 100000 for SHA256.")
+
+(defconstant +pbkdf2-iterations-debug+ 1000
+  "Debug iteration count. Fast for testing, NOT secure for production.")
 
 (defconstant +salt-length+ 16
   "Length of random salt in bytes.")
@@ -42,48 +51,44 @@
 (defconstant +hash-length+ 32
   "Length of derived key in bytes.")
 
-(defun generate-salt ()
-  "Generate a random salt for password hashing."
-  (let ((salt (make-array +salt-length+ :element-type '(unsigned-byte 8))))
-    (dotimes (i +salt-length+)
-      (setf (aref salt i) (random 256)))
-    salt))
+(defun get-pbkdf2-iterations ()
+  "Get the current PBKDF2 iteration count.
+   Uses debug iterations if *debug-mode* is true."
+  (if (and (boundp '*debug-mode*) *debug-mode*)
+      +pbkdf2-iterations-debug+
+      *pbkdf2-iterations*))
 
 (defun hash-password (password)
-  "Hash a password using PBKDF2-SHA256.
-   Returns a string in format: pbkdf2:sha256:iterations:salt-base64:hash-base64"
-  (let* ((salt (generate-salt))
-         (password-bytes (babel:string-to-octets password :encoding :utf-8))
-         (hash (ironclad:derive-key
-                (ironclad:make-kdf 'ironclad:pbkdf2 :digest 'ironclad:sha256)
-                password-bytes
-                salt
-                +pbkdf2-iterations+
-                +hash-length+)))
-    (format nil "pbkdf2:sha256:~a:~a:~a"
-            +pbkdf2-iterations+
-            (cl-base64:usb8-array-to-base64-string salt)
-            (cl-base64:usb8-array-to-base64-string hash))))
+  "Hash a password using PBKDF2-SHA256 via Ironclad's convenience function.
+   Returns a string in format: pbkdf2:sha256:iterations:salt-base64:hash-base64
+   Note: Uses fewer iterations in debug mode for faster testing."
+  (let* ((iterations (get-pbkdf2-iterations))
+         (password-bytes (ironclad:ascii-string-to-byte-array password)))
+    (multiple-value-bind (hash salt)
+        (ironclad:pbkdf2-hash-password password-bytes
+                                        :digest :sha256
+                                        :iterations iterations)
+      (format nil "pbkdf2:sha256:~a:~a:~a"
+              iterations
+              (cl-base64:usb8-array-to-base64-string salt)
+              (cl-base64:usb8-array-to-base64-string hash)))))
 
 (defun verify-password (password stored-hash)
   "Verify a password against a stored hash.
    Returns T if the password matches, NIL otherwise."
   (handler-case
       (let* ((parts (cl-ppcre:split ":" stored-hash))
-             (algorithm (second parts))
              (iterations (parse-integer (third parts)))
              (salt (cl-base64:base64-string-to-usb8-array (fourth parts)))
              (expected-hash (cl-base64:base64-string-to-usb8-array (fifth parts)))
-             (password-bytes (babel:string-to-octets password :encoding :utf-8))
-             (computed-hash (ironclad:derive-key
-                             (ironclad:make-kdf 'ironclad:pbkdf2
-                                                :digest (intern (string-upcase algorithm)
-                                                                :ironclad))
-                             password-bytes
-                             salt
-                             iterations
-                             (length expected-hash))))
-        (ironclad:constant-time-equal computed-hash expected-hash))
+             (password-bytes (ironclad:ascii-string-to-byte-array password)))
+        (multiple-value-bind (computed-hash _salt)
+            (ironclad:pbkdf2-hash-password password-bytes
+                                            :salt salt
+                                            :digest :sha256
+                                            :iterations iterations)
+          (declare (ignore _salt))
+          (ironclad:constant-time-equal computed-hash expected-hash)))
     (error () nil)))
 
 ;;; ============================================================================
@@ -174,8 +179,13 @@
 ;;; ============================================================================
 
 (defun extract-bearer-token (env)
-  "Extract Bearer token from Authorization header."
-  (let ((auth-header (getf env :http-authorization)))
+  "Extract Bearer token from Authorization header.
+   Handles both Lack/Clack style (headers in :headers hash-table)
+   and direct :http-authorization style."
+  (let* ((headers (getf env :headers))
+         (auth-header (or (when (hash-table-p headers)
+                            (gethash "authorization" headers))
+                          (getf env :http-authorization))))
     (when (and auth-header
                (> (length auth-header) 7)
                (string-equal "Bearer " (subseq auth-header 0 7)))

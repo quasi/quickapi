@@ -10,6 +10,7 @@ makes it in Python. It's not a framework - it's a carefully curated combination 
 proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent documentation."
 
   :depends-on ("clack"            ; HTTP server abstraction
+               "clack-handler-hunchentoot"  ; Default HTTP server (auto-loaded)
                "lack"             ; Middleware framework
                "lack-request"     ; Request parsing
                "lack-response"    ; Response utilities
@@ -30,7 +31,9 @@ proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent doc
                              (:file "lack-app")
                              (:file "core")
                              (:file "sqlite")
-                             (:file "models"))))
+                             (:file "models")
+                             (:file "config")
+                             (:file "deploy"))))
 
   :in-order-to ((test-op (test-op "quickapi/tests"))))
 

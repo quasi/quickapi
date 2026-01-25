@@ -1,0 +1,152 @@
+;;;; ABOUTME: Configuration management for quickapi - .env file support and environment variables
+
+(in-package :quickapi)
+
+;;; .env File Parsing and Loading
+
+(defvar *env-loaded* nil
+  "Whether .env file has been loaded in this session.")
+
+(defvar *env-values* (make-hash-table :test 'equal)
+  "Cached environment values from .env file.")
+
+(defun parse-env-line (line)
+  "Parse a single .env line into (key . value) or NIL for comments/empty lines.
+   Handles:
+   - Comments starting with #
+   - Empty lines
+   - KEY=value format
+   - KEY=\"quoted value\" format
+   - KEY='single quoted' format
+   - Inline comments after values"
+  (let ((trimmed (string-trim '(#\Space #\Tab #\Return) line)))
+    (when (and (plusp (length trimmed))
+               (char/= (char trimmed 0) #\#))
+      (let ((eq-pos (position #\= trimmed)))
+        (when eq-pos
+          (let* ((key (string-trim '(#\Space #\Tab) (subseq trimmed 0 eq-pos)))
+                 (raw-value (string-trim '(#\Space #\Tab) (subseq trimmed (1+ eq-pos))))
+                 (value (parse-env-value raw-value)))
+            (when (plusp (length key))
+              (cons key value))))))))
+
+(defun parse-env-value (raw)
+  "Parse an env value, handling quotes and inline comments."
+  (when (zerop (length raw))
+    (return-from parse-env-value ""))
+  (let ((first-char (char raw 0)))
+    (cond
+      ;; Double-quoted value
+      ((char= first-char #\")
+       (let ((end-quote (position #\" raw :start 1)))
+         (if end-quote
+             (subseq raw 1 end-quote)
+             (subseq raw 1))))
+      ;; Single-quoted value
+      ((char= first-char #\')
+       (let ((end-quote (position #\' raw :start 1)))
+         (if end-quote
+             (subseq raw 1 end-quote)
+             (subseq raw 1))))
+      ;; Unquoted value - strip inline comments
+      (t
+       (let ((comment-pos (position #\# raw)))
+         (string-trim '(#\Space #\Tab)
+                      (if comment-pos
+                          (subseq raw 0 comment-pos)
+                          raw)))))))
+
+(defun load-env-file (&optional (path ".env"))
+  "Load environment variables from a .env file.
+   PATH defaults to .env in current directory.
+   Returns T if file was loaded, NIL if not found."
+  (let ((filepath (if (pathnamep path) path (pathname path))))
+    (when (probe-file filepath)
+      (with-open-file (stream filepath :direction :input
+                                       :if-does-not-exist nil)
+        (when stream
+          (loop for line = (read-line stream nil nil)
+                while line
+                for parsed = (parse-env-line line)
+                when parsed
+                  do (setf (gethash (car parsed) *env-values*) (cdr parsed)))
+          (setf *env-loaded* t)
+          t)))))
+
+(defun getenv (name &key default)
+  "Get an environment variable value.
+   First checks loaded .env values, then system environment.
+   Returns DEFAULT if not found."
+  ;; Auto-load .env on first access if not loaded
+  (unless *env-loaded*
+    (load-env-file))
+  (or (gethash name *env-values*)
+      (uiop:getenv name)
+      default))
+
+(defun getenv-int (name &key default)
+  "Get an environment variable as an integer.
+   Returns DEFAULT if not found or not a valid integer."
+  (let ((value (getenv name)))
+    (if value
+        (handler-case (parse-integer value)
+          (error () default))
+        default)))
+
+(defun getenv-bool (name &key default)
+  "Get an environment variable as a boolean.
+   Recognizes: true, 1, yes, on (case-insensitive) as true.
+   Returns DEFAULT if not found."
+  (let ((value (getenv name)))
+    (if value
+        (member (string-downcase value) '("true" "1" "yes" "on") :test #'string=)
+        default)))
+
+(defun getenv-list (name &key (separator ",") default)
+  "Get an environment variable as a list of strings.
+   SEPARATOR defaults to comma.
+   Returns DEFAULT if not found."
+  (let ((value (getenv name)))
+    (if value
+        (mapcar (lambda (s) (string-trim '(#\Space #\Tab) s))
+                (cl-ppcre:split separator value))
+        default)))
+
+(defun require-env (name)
+  "Get an environment variable, signaling an error if not found.
+   Use this for required configuration values."
+  (let ((value (getenv name)))
+    (unless value
+      (error "Required environment variable ~A is not set" name))
+    value))
+
+;;; Configuration convenience
+
+(defun ensure-env-loaded ()
+  "Ensure .env file is loaded. Call this at application startup."
+  (unless *env-loaded*
+    (load-env-file)))
+
+(defun reload-env ()
+  "Reload .env file, clearing cached values."
+  (clrhash *env-values*)
+  (setf *env-loaded* nil)
+  (load-env-file))
+
+(defun print-env-template (routes &key (stream *standard-output*))
+  "Print a .env.example template based on common API settings.
+   ROUTES is ignored for now but could be used for route-specific config."
+  (declare (ignore routes))
+  (format stream "# Application Configuration~%")
+  (format stream "# Generated by quickapi~%~%")
+  (format stream "# Server settings~%")
+  (format stream "PORT=8000~%")
+  (format stream "HOST=0.0.0.0~%")
+  (format stream "DEBUG=false~%~%")
+  (format stream "# Database~%")
+  (format stream "DATABASE_PATH=app.db~%~%")
+  (format stream "# Authentication~%")
+  (format stream "JWT_SECRET=change-this-to-a-secure-random-string~%")
+  (format stream "JWT_EXPIRY=3600~%~%")
+  (format stream "# CORS (comma-separated origins)~%")
+  (format stream "CORS_ORIGINS=*~%"))

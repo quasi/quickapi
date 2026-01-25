@@ -44,17 +44,17 @@
 
 (5am:test bad-request-signals-condition
   "Test BAD-REQUEST signals HTTP condition with 400"
-  (5am:signals snooze:http-condition
+  (5am:signals qa:http-error
     (qa:bad-request "Invalid input")))
 
 (5am:test not-found-signals-condition
   "Test NOT-FOUND signals HTTP condition with 404"
-  (5am:signals snooze:http-condition
+  (5am:signals qa:http-error
     (qa:not-found "Resource not found")))
 
 (5am:test error-response-custom-status
   "Test ERROR-RESPONSE with custom status code"
-  (5am:signals snooze:http-condition
+  (5am:signals qa:http-error
     (qa:error-response 409 "Conflict detected")))
 
 ;;; Format Error Tests

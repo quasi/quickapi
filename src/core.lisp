@@ -108,24 +108,65 @@ Returns (values resource-name extracted-args) or NIL."
 
 ;;; Server Start/Stop
 
-(defun start (&key (port 8000) (address "0.0.0.0") (server :hunchentoot))
+(defun configure-debug-mode (debug)
+  "Configure Hunchentoot debug settings based on DEBUG flag.
+   When DEBUG is true:
+   - Enables detailed error messages
+   - Shows backtraces in error responses
+   - Enables catch-all error handler"
+  (setf *debug-mode* debug)
+  (when (find-package :hunchentoot)
+    (let ((ht-pkg (find-package :hunchentoot)))
+      (when debug
+        ;; Enable debug mode settings
+        (when (find-symbol "*CATCH-ERRORS-P*" ht-pkg)
+          (setf (symbol-value (find-symbol "*CATCH-ERRORS-P*" ht-pkg)) nil))
+        (when (find-symbol "*SHOW-LISP-ERRORS-P*" ht-pkg)
+          (setf (symbol-value (find-symbol "*SHOW-LISP-ERRORS-P*" ht-pkg)) t))
+        (when (find-symbol "*SHOW-LISP-BACKTRACES-P*" ht-pkg)
+          (setf (symbol-value (find-symbol "*SHOW-LISP-BACKTRACES-P*" ht-pkg)) t)))
+      (unless debug
+        ;; Production mode - catch errors, hide details
+        (when (find-symbol "*CATCH-ERRORS-P*" ht-pkg)
+          (setf (symbol-value (find-symbol "*CATCH-ERRORS-P*" ht-pkg)) t))
+        (when (find-symbol "*SHOW-LISP-ERRORS-P*" ht-pkg)
+          (setf (symbol-value (find-symbol "*SHOW-LISP-ERRORS-P*" ht-pkg)) nil))
+        (when (find-symbol "*SHOW-LISP-BACKTRACES-P*" ht-pkg)
+          (setf (symbol-value (find-symbol "*SHOW-LISP-BACKTRACES-P*" ht-pkg)) nil))))))
+
+(defun start (&key (port 8000) (address "0.0.0.0") (server :hunchentoot) (debug :env))
   "Start the API server on PORT (default 8000).
-   SERVER can be :hunchentoot (default) or :woo (faster, async)."
+   SERVER can be :hunchentoot (default) or :woo (faster, async).
+   DEBUG can be:
+   - T or :true - Enable debug mode
+   - NIL or :false - Disable debug mode (production)
+   - :env (default) - Read from DEBUG environment variable"
   (when *server*
     (stop))
-  (let* ((base-app (make-quickapi-app))
-         (middlewares (when *api* (api-middlewares *api*)))
-         (app (if middlewares
-                  (build-app-with-middleware base-app middlewares)
-                  base-app)))
-    (setf *server* (clack:clackup app
-                                   :port port
-                                   :address address
-                                   :server server
-                                   :use-thread t
-                                   :silent t))
-    (format t "~&Server started on http://~a:~a/~%" address port)
-    *server*))
+  ;; Resolve debug setting
+  (let ((debug-enabled (case debug
+                         ((:env) (getenv-bool "DEBUG" :default nil))
+                         ((:true t) t)
+                         ((:false nil) nil)
+                         (t debug))))
+    ;; Configure debug mode for Hunchentoot
+    (configure-debug-mode debug-enabled)
+    (when debug-enabled
+      (format t "~&NOTICE: Running in debug mode. Debugger will be invoked on errors.~%")
+      (format t "  Specify ':debug nil' to turn it off on remote environments.~%"))
+    (let* ((base-app (make-quickapi-app))
+           (middlewares (when *api* (api-middlewares *api*)))
+           (app (if middlewares
+                    (build-app-with-middleware base-app middlewares)
+                    base-app)))
+      (setf *server* (clack:clackup app
+                                     :port port
+                                     :address address
+                                     :server server
+                                     :use-thread t
+                                     :silent (not debug-enabled)))
+      (format t "~&Server started on http://~a:~a/~%" address port)
+      *server*)))
 
 (defun stop ()
   "Stop the running API server."

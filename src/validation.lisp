@@ -50,13 +50,7 @@
 
 (defun signal-validation-error ()
   "Signal the collected validation errors as a 422 response."
-  (snooze:http-condition 422
-    (com.inuoe.jzon:stringify
-     (let ((response (make-hash-table :test 'equal)))
-       (setf (gethash "error" response) "validation_error")
-       (setf (gethash "message" response) "Validation failed")
-       (setf (gethash "details" response) (nreverse *validation-errors*))
-       response))))
+  (error 'validation-error :errors (nreverse *validation-errors*)))
 
 ;;; Validation Check Functions
 ;;; Each takes the data hash-table as its last argument

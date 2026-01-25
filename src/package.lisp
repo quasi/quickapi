@@ -7,6 +7,7 @@
    #:defapi
    #:start
    #:stop
+   #:*debug-mode*
    #:api-name
    #:api-version
    #:api-description
@@ -70,9 +71,36 @@
    #:verify-jwt
    #:hash-password
    #:verify-password
-   #:session-get))
+   #:session-get
+
+   ;; Configuration (.env support)
+   #:load-env-file
+   #:getenv
+   #:getenv-int
+   #:getenv-bool
+   #:getenv-list
+   #:require-env
+   #:ensure-env-loaded
+   #:reload-env
+   #:print-env-template
+
+   ;; Deployment utilities
+   #:generate-start-script
+   #:generate-systemd-unit
+   #:generate-smoke-tests
+   #:generate-healthcheck
+   #:generate-deployment-files))
 
 (in-package :quickapi)
+
+;;; Global configuration
+
+(defvar *debug-mode* nil
+  "Whether the server is running in debug mode.
+   When true:
+   - Enables detailed error messages
+   - Uses faster (less secure) password hashing for testing
+   - Shows backtraces in responses")
 
 ;;; Special variables for request context
 
