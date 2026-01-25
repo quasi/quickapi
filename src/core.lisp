@@ -191,8 +191,10 @@ E.g., /todos/:id with GET -> TODOS/:ID/GET"
          (lambda (env params)
            (declare (ignorable env))
            ;; Bind path parameters from the matched params alist
+           ;; Re-intern in user's package so their code can reference them
            (let (,@(loop for param in path-params
-                         collect `(,param (cdr (assoc ',param params)))))
+                         for user-sym = (intern (symbol-name param) *package*)
+                         collect `(,user-sym (cdr (assoc ',param params)))))
              (let ((result (progn ,@body)))
                ;; Convert result to Lack response format
                (response-to-lack result))))
