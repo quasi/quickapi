@@ -245,6 +245,23 @@
 
 ;;; Generic CRUD Implementation
 
+(defun collect-insert-fields (field-names data)
+  "Extract columns, values, and placeholders from DATA for INSERT.
+   Returns (values columns values placeholders) as lists ready for SQL building."
+  (let ((columns '())
+        (values '())
+        (placeholders '()))
+    (dolist (field field-names)
+      (let* ((lisp-key (string-downcase (symbol-name field)))
+             (sql-col (lisp-to-sql-name field)))
+        (multiple-value-bind (value present)
+            (gethash lisp-key data)
+          (when present
+            (push sql-col columns)
+            (push (lisp-to-sqlite-value value) values)
+            (push "?" placeholders)))))
+    (values (nreverse columns) (nreverse values) (nreverse placeholders))))
+
 (defun lisp-to-sqlite-value (value)
   "Convert a Lisp value to a SQLite-compatible value.
    Booleans are converted to 0/1, others pass through unchanged."
@@ -263,26 +280,13 @@
 (defun model-create (table-name field-names data)
   "Insert a new record into TABLE-NAME using DATA hash-table.
    Field names are converted from Lisp style (hyphens) to SQL style (underscores)."
-  (let* ((columns '())
-         (values '())
-         (placeholders '()))
-    ;; Collect fields that have values in data
-    (dolist (field field-names)
-      (let* ((lisp-key (string-downcase (symbol-name field)))
-             (sql-col (lisp-to-sql-name field)))
-        (multiple-value-bind (value present)
-            (gethash lisp-key data)
-          (when present
-            (push sql-col columns)
-            (push (lisp-to-sqlite-value value) values)
-            (push "?" placeholders)))))
+  (multiple-value-bind (columns values placeholders)
+      (collect-insert-fields field-names data)
     ;; Build and execute INSERT
     (if columns
         (let ((sql (format nil "INSERT INTO ~a (~{~a~^, ~}) VALUES (~{~a~^, ~})"
-                           table-name
-                           (nreverse columns)
-                           (nreverse placeholders))))
-          (apply #'sqlite:execute-non-query *db* sql (nreverse values)))
+                           table-name columns placeholders)))
+          (apply #'sqlite:execute-non-query *db* sql values))
         ;; No columns provided - insert with defaults only
         (sqlite:execute-non-query *db*
           (format nil "INSERT INTO ~a DEFAULT VALUES" table-name)))

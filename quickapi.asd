@@ -4,6 +4,7 @@
   :version "0.1.0"
   :author "Quasilabs"
   :license "MIT"
+  :homepage "https://github.com/quasi/quickapi"
   :description "Curated stack for JSON APIs in Common Lisp - like FastAPI but simpler"
   :long-description "Quickapi makes building JSON APIs in Common Lisp as easy as FastAPI
 makes it in Python. It's not a framework - it's a carefully curated combination of

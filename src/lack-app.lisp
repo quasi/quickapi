@@ -97,7 +97,8 @@
             (make-error-response 404 "not_found" "Route not found"))))))
 
 (defun find-pattern-for-resource (resource-name method)
-  "Find the URI pattern for a resource name."
+  "Find the URI pattern for a resource name by searching *route-registry*.
+   Returns pattern string or NIL if not found."
   (maphash (lambda (key entry)
              (declare (ignore key))
              (when (and (eq (route-entry-method entry) method)
@@ -139,8 +140,10 @@
                                    (validation-errors e))))))
       ;; Handle unexpected errors
       (error (e)
-        (make-error-response 500 "internal_error"
-                             (format nil "~a" e))))))
+        (if *debug-mode*
+            (error e)  ; Re-signal in debug mode for better debugging
+            (make-error-response 500 "internal_error"
+                                 (format nil "~a" e)))))))
 
 (defun make-error-response (status error-type message)
   "Create a JSON error response."

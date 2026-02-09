@@ -64,14 +64,13 @@
     (when (probe-file filepath)
       (with-open-file (stream filepath :direction :input
                                        :if-does-not-exist nil)
-        (when stream
-          (loop for line = (read-line stream nil nil)
-                while line
-                for parsed = (parse-env-line line)
-                when parsed
-                  do (setf (gethash (car parsed) *env-values*) (cdr parsed)))
-          (setf *env-loaded* t)
-          t)))))
+        (loop for line = (read-line stream nil nil)
+              while line
+              for parsed = (parse-env-line line)
+              when parsed
+                do (setf (gethash (car parsed) *env-values*) (cdr parsed)))
+        (setf *env-loaded* t)
+        t))))
 
 (defun getenv (name &key default)
   "Get an environment variable value.
@@ -117,7 +116,7 @@
    Use this for required configuration values."
   (let ((value (getenv name)))
     (unless value
-      (error "Required environment variable ~A is not set" name))
+      (error "Required environment variable ~A is not set. Set it in .env file or system environment." name))
     value))
 
 ;;; Configuration convenience

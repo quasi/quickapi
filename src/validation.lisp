@@ -16,7 +16,8 @@
 ;;; Validation Error Collection
 
 (defvar *validation-errors* nil
-  "Collects validation errors during a VALIDATE block.")
+  "Collects validation errors during a VALIDATE block.
+   Thread-safe: Always bound dynamically within VALIDATE macro, never mutated globally.")
 
 (defun add-validation-error (field message)
   "Add a validation error for FIELD with MESSAGE to the current collection."
