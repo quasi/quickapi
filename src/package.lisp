@@ -57,9 +57,42 @@
    #:migrate-models
    #:*models*
 
-   ;; HTTP conditions
+   ;; Condition types (hierarchy)
+   #:quickapi-error
    #:http-error
-   #:http-condition
+   #:client-error
+   #:server-error
+   #:bad-request-error
+   #:unauthorized-error
+   #:forbidden-error
+   #:not-found-error
+   #:conflict-error
+   #:validation-error
+   #:internal-server-error
+   #:database-error
+   #:record-not-found
+   #:duplicate-record
+   #:connection-error
+   #:authentication-error
+   #:invalid-credentials
+
+   ;; Condition accessors
+   #:error-message
+   #:http-error-status
+   #:http-error-details
+   #:validation-errors
+   #:db-error-operation
+   #:db-error-table
+   #:duplicate-field
+   #:error-cause
+
+   ;; Condition signaling helpers
+   #:bad-request
+   #:unauthorized
+   #:forbidden
+   #:not-found
+   #:conflict
+   #:internal-error
 
    ;; Authentication
    #:*current-user*

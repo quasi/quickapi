@@ -26,6 +26,7 @@ proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent doc
   :components ((:module "src"
                 :serial t
                 :components ((:file "package")
+                             (:file "conditions")
                              (:file "response")
                              (:file "validation")
                              (:file "auth")

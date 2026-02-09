@@ -294,25 +294,60 @@
     (model-find table-name (last-insert-id))))
 
 (defun model-find (table-name id)
-  "Find a record by id in TABLE-NAME."
+  "Find a record by id in TABLE-NAME.
+   Offers restarts if record not found:
+   - USE-VALUE: Provide a record to use instead
+   - RETURN-NIL: Return NIL instead of erroring
+   - RETRY: Retry the database lookup"
   (let* ((columns (get-column-names table-name))
          (rows (sqlite:execute-to-list *db*
                  (format nil "SELECT * FROM ~a WHERE id = ?" table-name)
                  id)))
-    (when rows
-      (row-to-hash (first rows) columns))))
+    (if rows
+        (row-to-hash (first rows) columns)
+        (restart-case
+            (error 'record-not-found
+                   :operation 'SELECT
+                   :table table-name
+                   :message (format nil "Record with id ~a not found in table ~a" id table-name))
+          (use-value (value)
+            :report "Provide a record (hash-table) to use instead"
+            :interactive (lambda () (list (make-hash-table :test 'equal)))
+            value)
+          (return-nil ()
+            :report "Return NIL instead of signaling an error"
+            nil)
+          (retry ()
+            :report "Retry the database lookup"
+            (model-find table-name id))))))
 
 (defun model-find-by (table-name field value)
   "Find a record by FIELD=VALUE in TABLE-NAME.
-   FIELD is converted from Lisp style (hyphens) to SQL style (underscores)."
+   FIELD is converted from Lisp style (hyphens) to SQL style (underscores).
+   Offers restarts if record not found (same as model-find)."
   (let* ((sql-field (lisp-to-sql-name field))
          (columns (get-column-names table-name))
          (rows (sqlite:execute-to-list *db*
                  (format nil "SELECT * FROM ~a WHERE ~a = ? LIMIT 1"
                          table-name sql-field)
                  value)))
-    (when rows
-      (row-to-hash (first rows) columns))))
+    (if rows
+        (row-to-hash (first rows) columns)
+        (restart-case
+            (error 'record-not-found
+                   :operation 'SELECT
+                   :table table-name
+                   :message (format nil "Record with ~a = ~a not found in table ~a" field value table-name))
+          (use-value (value)
+            :report "Provide a record (hash-table) to use instead"
+            :interactive (lambda () (list (make-hash-table :test 'equal)))
+            value)
+          (return-nil ()
+            :report "Return NIL instead of signaling an error"
+            nil)
+          (retry ()
+            :report "Retry the database lookup"
+            (model-find-by table-name field value))))))
 
 (defun model-list (table-name &key limit offset order-by)
   "List records from TABLE-NAME with optional pagination."

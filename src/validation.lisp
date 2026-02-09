@@ -1,19 +1,9 @@
-;;;; ABOUTME: Validation functions for quickapi - simple validation without DSL
+;;;; ABOUTME: Validation functions for quickapi - simple validation with restarts
 
 (in-package :quickapi)
 
-;;; Validation Condition
-
-(define-condition validation-error (error)
-  ((errors :initarg :errors
-           :reader validation-errors
-           :documentation "List of validation error details"))
-  (:report (lambda (c stream)
-             (format stream "Validation failed: ~a error(s)"
-                     (length (validation-errors c)))))
-  (:documentation "Signalled when request validation fails."))
-
 ;;; Validation Error Collection
+;;; Note: validation-error condition is now defined in conditions.lisp
 
 (defvar *validation-errors* nil
   "Collects validation errors during a VALIDATE block.
@@ -50,8 +40,15 @@
          (signal-validation-error)))))
 
 (defun signal-validation-error ()
-  "Signal the collected validation errors as a 422 response."
-  (error 'validation-error :errors (nreverse *validation-errors*)))
+  "Signal validation error with restarts for recovery."
+  (restart-case
+      (error 'validation-error :errors (nreverse *validation-errors*))
+    (skip-validation ()
+      :report "Skip validation and proceed with data as-is"
+      nil)
+    (use-defaults ()
+      :report "Fill missing/invalid fields with defaults"
+      :use-defaults)))
 
 ;;; Validation Check Functions
 ;;; Each takes the data hash-table as its last argument

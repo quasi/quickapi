@@ -227,22 +227,27 @@
 
 (defun perform-auth-check (auth-type env)
   "Perform authentication check based on AUTH-TYPE.
-   Returns (values success-p user-or-nil error-message-or-nil)."
+   Signals authentication-error if auth fails.
+   Returns authenticated user data on success."
   (case auth-type
     (:jwt
      (let ((claims (check-jwt-auth env)))
        (if claims
-           (values t claims nil)
-           (values nil nil "Invalid or expired token"))))
+           claims
+           (error 'authentication-error
+                  :message "Invalid or expired JWT token"))))
     (:session
      (let ((user (check-session-auth env)))
        (if user
-           (values t user nil)
-           (values nil nil "Session required"))))
+           user
+           (error 'authentication-error
+                  :message "Session required or invalid"))))
     (:api-key
      (let ((user (check-api-key-auth env)))
        (if user
-           (values t user nil)
-           (values nil nil "Invalid API key"))))
+           user
+           (error 'authentication-error
+                  :message "Invalid or missing API key"))))
     (t
-     (values nil nil (format nil "Unknown auth type: ~a" auth-type)))))
+     (error 'bad-request-error
+            :message (format nil "Unknown authentication type: ~a" auth-type)))))

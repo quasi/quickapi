@@ -2,22 +2,7 @@
 
 (in-package :quickapi)
 
-;;; HTTP Error Condition
-;;; Replaces snooze:http-condition with a proper CL condition + restart pattern
-
-(define-condition http-error (error)
-  ((status :initarg :status :reader http-error-status)
-   (body :initarg :body :reader http-error-body))
-  (:report (lambda (c stream)
-             (format stream "HTTP ~a: ~a"
-                     (http-error-status c)
-                     (http-error-body c))))
-  (:documentation "Condition for HTTP error responses."))
-
-(defun http-condition (status body)
-  "Signal an HTTP error condition. BODY should be a JSON string.
-   This replaces snooze:http-condition."
-  (error 'http-error :status status :body body))
+;;; Note: HTTP error conditions are now defined in conditions.lisp
 
 ;;; Route Handler Registry
 ;;; Each route stores a handler function (closure) that takes (env params)
@@ -112,44 +97,38 @@
   "Dispatch to a route handler, handling auth and errors gracefully."
   (let ((handler (handler-entry-function handler-entry))
         (auth-type (handler-entry-auth-type handler-entry)))
-    ;; Check authentication if required
+    ;; Check authentication if required (now uses conditions)
     (when auth-type
-      (multiple-value-bind (success user error-message)
-          (perform-auth-check auth-type env)
-        (if success
-            (setf *current-user* user)
-            (return-from dispatch-to-handler
-              (make-error-response 401 "unauthorized"
-                                   (or error-message "Authentication required"))))))
+      (setf *current-user* (perform-auth-check auth-type env)))
     ;; Auth passed (or not required) - dispatch to handler
     (handler-case
         (let ((*body* (when (member method '(:post :put :patch))
                         (parse-json-body-from-env env))))
           (funcall handler env params))
-      ;; Handle HTTP error conditions
+      ;; Handle HTTP errors (uses new condition hierarchy)
       (http-error (e)
-        (list (http-error-status e)
-              '(:content-type "application/json; charset=utf-8")
-              (list (http-error-body e))))
-      ;; Handle validation errors
-      (validation-error (e)
-        (list 422
-              '(:content-type "application/json; charset=utf-8")
-              (list (com.inuoe.jzon:stringify
-                     (format-error "validation_error" "Validation failed"
-                                   (validation-errors e))))))
+        (http-error-to-response e))
+      ;; Handle database errors (may also inherit from http-error)
+      (database-error (e)
+        (if *debug-mode*
+            (error e)  ; Re-signal in debug mode
+            (http-error-to-response e)))
       ;; Handle unexpected errors
       (error (e)
         (if *debug-mode*
             (error e)  ; Re-signal in debug mode for better debugging
-            (make-error-response 500 "internal_error"
-                                 (format nil "~a" e)))))))
+            (list 500
+                  '(:content-type "application/json; charset=utf-8")
+                  (list (com.inuoe.jzon:stringify
+                         (format-error-response 500 "Internal server error"
+                                                (format nil "~a" e)))))))))))
 
-(defun make-error-response (status error-type message)
-  "Create a JSON error response."
+(defun make-error-response (status error-type message &optional details)
+  "Create a JSON error response.
+   Note: This is a legacy helper. New code should signal specific condition types."
   (list status
         '(:content-type "application/json; charset=utf-8")
-        (list (com.inuoe.jzon:stringify (format-error error-type message)))))
+        (list (com.inuoe.jzon:stringify (format-error-response status message details)))))
 
 ;;; Middleware Builder
 
