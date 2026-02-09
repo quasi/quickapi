@@ -1,0 +1,141 @@
+---
+# Context Bundle: Response Helpers Feature
+# Auto-generated for canon-genesis and sub-agent workflows
+
+feature:
+  name: response_helpers
+  status: stable
+  confidence: 0.95
+  category: core
+
+summary: |
+  Response helpers are functions that construct standardized HTTP responses with
+  proper status codes, headers, and JSON bodies. Includes success helpers (ok,
+  created, no-content) and error helpers (bad-request, not-found, error-response).
+
+key_concepts:
+  - "Response Helper: Function returning (status headers body) tuple"
+  - "Success Helpers: ok (200), created (201), no-content (204)"
+  - "Error Helpers: bad-request (400), not-found (404), error-response (custom)"
+  - "Automatic JSON: All responses serialized to JSON"
+  - "Keyword Arguments: Optional data fields for response body"
+
+primary_contracts:
+  - ok: "200 OK with optional data (keyword args → JSON object)"
+  - created: "201 Created with optional data and Location header"
+  - no-content: "204 No Content (empty response)"
+  - bad-request: "400 Bad Request with error message"
+  - not-found: "404 Not Found with error message"
+  - error-response: "Custom status code with error details"
+
+core_properties:
+  - "All responses include Content-Type: application/json"
+  - "Keyword arguments converted to JSON object fields"
+  - "Error responses follow standardized {error, message} format"
+  - "Success responses can include arbitrary data fields"
+  - "No Content (204) returns empty body (no JSON)"
+
+dependencies:
+  - json_serialization: "Response body serialization"
+  - snooze: "Response tuple format (status headers body)"
+
+implementation_files:
+  - src/response.lisp: "All response helpers"
+  - src/package.lisp: "Exported helper functions"
+
+test_files:
+  - tests/response-tests.lisp: "8 comprehensive tests"
+
+example_usage: |
+  ;; Success response with data
+  (api-get "/users/:id" ()
+    (ok :id id :name "Alice" :email "alice@example.com"))
+  ;; Returns: 200 {"id": "123", "name": "Alice", "email": "alice@example.com"}
+
+  ;; Created with Location header
+  (api-post "/users" ()
+    (let ((user (create-user *body*)))
+      (created :id (user-id user) :location (format nil "/users/~a" (user-id user)))))
+  ;; Returns: 201 {"id": "456"} with Location: /users/456
+
+  ;; No content
+  (api-delete "/users/:id" ()
+    (delete-user id)
+    (no-content))
+  ;; Returns: 204 (empty body)
+
+  ;; Not found
+  (api-get "/users/:id" ()
+    (let ((user (find-user id)))
+      (if user
+          (ok :user user)
+          (not-found "User not found"))))
+  ;; Returns: 404 {"error": "not_found", "message": "User not found"}
+
+  ;; Custom error
+  (error-response 422 "validation_error" "Invalid data" :field "email")
+  ;; Returns: 422 {"error": "validation_error", "message": "Invalid data", "field": "email"}
+
+helper_signatures:
+  ok: "(&rest keyword-args)"
+  created: "(&rest keyword-args &key location)"
+  no-content: "()"
+  bad-request: "(message)"
+  not-found: "(message)"
+  error-response: "(status error message &rest keyword-args)"
+
+response_formats:
+  success_ok: |
+    200 OK
+    {"field1": "value1", "field2": "value2"}
+
+  success_created: |
+    201 Created
+    Location: /resource/123
+    {"id": "123"}
+
+  success_no_content: |
+    204 No Content
+    (empty body)
+
+  error_not_found: |
+    404 Not Found
+    {"error": "not_found", "message": "Resource not found"}
+
+  error_custom: |
+    422 Unprocessable Entity
+    {"error": "validation_error", "message": "Invalid data", "details": [...]}
+
+keyword_argument_handling:
+  - "Keyword args converted to JSON object: :id 123 → {\"id\": 123}"
+  - "Special keys: :location (created helper) → Location header"
+  - "All other keys become JSON fields"
+  - "Nested data supported: :user (hash-table) → {\"user\": {...}}"
+
+common_patterns:
+  - "Return data: (ok :id id :name name)"
+  - "Return list: (ok :users (list-users))"
+  - "Create resource: (created :id new-id :location uri)"
+  - "Delete resource: (no-content)"
+  - "Resource not found: (not-found \"Resource not found\")"
+  - "Custom error: (error-response 422 \"validation_error\" msg)"
+
+known_issues: []
+
+design_decisions:
+  - "Keyword args for data: Concise, readable, flexible"
+  - "Standardized error format: Predictable for clients"
+  - "No-content (204) for successful deletes: RESTful convention"
+
+related_features:
+  - json_serialization: "Serializes response bodies"
+  - error_handling: "Standardized error format"
+  - routing: "Route handlers return responses"
+  - validation: "validation-error uses error-response (422)"
+
+vocabulary_references:
+  - Response: "HTTP response (status, headers, body)"
+  - Response Helper: "Function constructing standardized response"
+  - HTTP Status: "Status code (200, 201, 204, 400, 404, etc.)"
+  - Location Header: "URI of created resource (201)"
+  - Error Format: "Standardized {error, message, details} structure"

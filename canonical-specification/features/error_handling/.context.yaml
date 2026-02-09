@@ -1,0 +1,150 @@
+---
+# Context Bundle: Error Handling Feature
+# Auto-generated for canon-genesis and sub-agent workflows
+
+feature:
+  name: error_handling
+  status: stable
+  confidence: 0.95
+  category: core
+
+summary: |
+  Error handling provides standardized JSON error responses with consistent format
+  across all error types. Errors follow {error, message, details} structure with
+  appropriate HTTP status codes. Validation errors signal HTTP 422, other errors
+  use semantic status codes (400, 404, 500, etc.).
+
+key_concepts:
+  - "Standardized Format: {error, message, details}"
+  - "HTTP Status Codes: 400, 404, 422, 500, etc."
+  - "Condition System: Snooze HTTP conditions"
+  - "Validation Errors: HTTP 422 with collected errors"
+  - "Automatic Serialization: Error responses auto-converted to JSON"
+
+primary_contracts:
+  - "All errors return JSON with {error, message} fields"
+  - "Validation errors return HTTP 422 with details array"
+  - "Not found errors return HTTP 404"
+  - "Bad request errors return HTTP 400"
+  - "Internal errors return HTTP 500"
+
+core_properties:
+  - "Error format is consistent and predictable"
+  - "All error responses have Content-Type: application/json"
+  - "Validation errors include details array with all failures"
+  - "Error messages are human-readable strings"
+  - "Error codes are lowercase_underscore format"
+
+dependencies:
+  - snooze: "HTTP condition signaling"
+  - json_serialization: "Error response serialization"
+  - validation: "validation-error condition (422)"
+  - response_helpers: "error-response helper"
+
+implementation_files:
+  - src/validation.lisp:71-88: "validation-error condition and handler"
+  - src/response.lisp: "error-response, bad-request, not-found helpers"
+
+test_files:
+  - tests/validation-tests.lisp: "Validation error tests"
+  - tests/response-tests.lisp: "Error response tests"
+
+example_error_responses:
+  validation_error: |
+    HTTP 422 Unprocessable Entity
+    {
+      "error": "validation_error",
+      "message": "Validation failed",
+      "details": [
+        {"field": "name", "message": "required"},
+        {"field": "age", "message": "must be at least 0"}
+      ]
+    }
+
+  not_found: |
+    HTTP 404 Not Found
+    {
+      "error": "not_found",
+      "message": "Resource not found"
+    }
+
+  bad_request: |
+    HTTP 400 Bad Request
+    {
+      "error": "bad_request",
+      "message": "Invalid request"
+    }
+
+  internal_error: |
+    HTTP 500 Internal Server Error
+    {
+      "error": "internal_error",
+      "message": "An unexpected error occurred"
+    }
+
+error_response_format:
+  required_fields:
+    - "error: Error code (lowercase_underscore)"
+    - "message: Human-readable description"
+  optional_fields:
+    - "details: Array of error details (validation errors)"
+    - "field: Specific field causing error (single field errors)"
+    - "code: Application-specific error code"
+
+http_status_codes:
+  400: "Bad Request (malformed request, invalid syntax)"
+  404: "Not Found (resource doesn't exist)"
+  422: "Unprocessable Entity (validation failure)"
+  500: "Internal Server Error (unexpected condition)"
+
+error_code_conventions:
+  - "lowercase_underscore format (e.g., validation_error, not_found)"
+  - "Descriptive and semantic (validation_error, not bad_data)"
+  - "Consistent across all error types"
+
+validation_error_details:
+  format: |
+    [
+      {"field": "field_name", "message": "error description"},
+      {"field": "another_field", "message": "another error"}
+    ]
+
+  properties:
+    - "Array of objects (one per validation failure)"
+    - "Each object has field and message keys"
+    - "All errors collected before response (non-fail-fast)"
+    - "Order matches validation order in code"
+
+common_patterns:
+  - "Return not found: (not-found \"Resource not found\")"
+  - "Return bad request: (bad-request \"Invalid parameters\")"
+  - "Custom error: (error-response 422 \"validation_error\" \"Invalid data\")"
+  - "Validation error: (signal 'validation-error :errors collected-errors)"
+
+condition_system:
+  - "validation-error: Condition for validation failures"
+  - "Snooze HTTP conditions for other errors"
+  - "Conditions automatically convert to JSON responses"
+
+known_issues:
+  - "No documented error response format schema (recommendation pending)"
+  - "No tests for internal server errors (500)"
+  - "No global error handler documentation"
+
+design_decisions:
+  - "HTTP 422 for validation: Semantic correctness (ADR-003)"
+  - "Standardized format: Predictable for API clients"
+  - "Error collection: Better UX than fail-fast"
+  - "JSON-only: Consistent with API-wide JSON focus"
+
+related_features:
+  - validation: "Validation errors (422)"
+  - response_helpers: "Error response constructors"
+  - json_serialization: "Error response serialization"
+
+vocabulary_references:
+  - Error Response: "Standardized JSON error format"
+  - HTTP Status Code: "Semantic response code (400, 404, 422, 500)"
+  - Validation Error: "HTTP 422 with collected error details"
+  - Error Code: "Machine-readable error identifier"
+  - Error Message: "Human-readable error description"

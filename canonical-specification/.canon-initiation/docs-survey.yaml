@@ -1,0 +1,121 @@
+---
+# Pass 0: Documentation Survey
+# Establishes documentation claims before examining code
+
+pass: 0
+name: docs_survey
+completed_at: "2026-01-24"
+
+sources_surveyed:
+  - README.md
+  - docs/01-quickstart.md
+  - docs/02-tutorial.md
+  - docs/03-database.md
+  - docs/04-deployment.md
+  - quickapi.asd (system description)
+
+system_description:
+  from: README.md + quickapi.asd
+  tagline: "Build JSON APIs in Common Lisp with minimal boilerplate"
+  positioning: "Like FastAPI but simpler - curated combination of proven libraries"
+  target: "REST APIs in small-to-medium Common Lisp projects"
+
+claimed_features:
+  - name: minimal_dsl
+    description: "5 HTTP route macros (api-get, api-post, api-put, api-delete, api-patch)"
+    source: README.md
+
+  - name: automatic_json
+    description: "Response bodies serialize automatically, request bodies parse automatically"
+    source: README.md
+
+  - name: validation
+    description: "Built-in validation for required fields, types, lengths, ranges, patterns"
+    source: README.md
+    validators: [require-fields, require-type, require-length, require-range, require-pattern]
+
+  - name: sqlite_integration
+    description: "Database helpers for CRUD operations and transactions"
+    source: README.md
+    helpers: [with-db, ensure-table, last-insert-id, row-to-hash, rows-to-json, with-transaction]
+
+  - name: error_handling
+    description: "Standardized error responses"
+    source: README.md
+    helpers: [not-found, bad-request, ok, created, no-content, error-response]
+
+  - name: request_context
+    description: "Access parsed body, path parameters, and query parameters"
+    source: README.md
+    variables: [*request*, *body*]
+    functions: [body, path-param, query-param, header]
+
+  - name: path_parameters
+    description: "Path parameters like :id are automatically extracted and bound as variables"
+    source: README.md
+    examples:
+      - pattern: "/users/:id"
+        binding: "id variable automatically bound"
+      - pattern: "/users/:user-id/posts/:post-id"
+        binding: "Both user-id and post-id bound"
+
+dependencies:
+  snooze:
+    description: "CLOS-based routing, ~850 LoC"
+    purpose: "HTTP routing and request handling"
+  hunchentoot:
+    description: "HTTP server"
+    purpose: "Serve HTTP requests"
+  com.inuoe.jzon:
+    description: "Modern JSON library"
+    purpose: "JSON parsing and serialization"
+  cl-ppcre:
+    description: "Regex library"
+    purpose: "Pattern validation"
+  sqlite:
+    description: "cl-sqlite database bindings"
+    purpose: "SQLite database operations"
+    optional: true
+
+api_lifecycle:
+  - step: 1
+    action: "Load quickapi via Quicklisp"
+    code: "(ql:quickload :quickapi)"
+
+  - step: 2
+    action: "Define API with defapi macro"
+    code: "(defapi my-api :name \"My API\" :version \"1.0\")"
+
+  - step: 3
+    action: "Define routes with api-* macros"
+    code: "(api-get \"/\" () ...)"
+
+  - step: 4
+    action: "Start server"
+    code: "(start :port 8000)"
+
+examples_provided:
+  - file: examples/hello-world.lisp
+    description: "Minimal example - single GET route"
+
+  - file: examples/todo-api.lisp
+    description: "Complete CRUD API with SQLite persistence, validation, all 5 HTTP methods"
+
+tutorials:
+  - file: docs/01-quickstart.md
+    scope: "5-minute hello world"
+
+  - file: docs/02-tutorial.md
+    scope: "30-minute complete todo API with database"
+
+staleness_signals:
+  # None detected - this is a new project with recent commits
+  - type: none
+    notes: "Project created recently (2026-01), documentation appears current"
+
+confidence_notes:
+  - "Documentation is comprehensive and recent"
+  - "Examples match claimed features"
+  - "ABOUTME comments in source files align with docs"
+  - "Tutorial provides step-by-step validation"
+  - "README clearly states 'Early stage' - sets expectations"

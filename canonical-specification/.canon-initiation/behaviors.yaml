@@ -1,0 +1,368 @@
+---
+# Pass 3: Behavioral Capture
+# Extracts scenarios from TESTS and examples
+
+pass: 3
+name: behavioral_capture
+completed_at: "2026-01-24"
+
+test_coverage:
+  test_framework: fiveam
+  test_suites:
+    - quickapi-tests
+
+  test_files:
+    - tests/response-tests.lisp
+    - tests/validation-tests.lisp
+    - tests/sqlite-tests.lisp
+    - tests/integration-tests.lisp
+
+  total_tests: "~40+"  # Approximate count from validation tests alone
+
+scenarios_from_tests:
+  validation:
+    source: tests/validation-tests.lisp
+    scenarios:
+      - name: require-fields-validates-presence
+        given: "Hash table with data"
+        when: "require-fields called with field names"
+        then: "No errors if all fields present"
+        test: require-fields-all-present
+        confidence: 0.95
+
+      - name: require-fields-detects-missing
+        given: "Hash table missing a required field"
+        when: "require-fields validates"
+        then: "Validation error added"
+        test: require-fields-missing-field
+        confidence: 0.95
+
+      - name: require-fields-rejects-empty-string
+        given: "Hash table with empty string value"
+        when: "require-fields validates"
+        then: "Treated as missing, validation error added"
+        test: require-fields-empty-string
+        confidence: 0.95
+
+      - name: require-type-validates-string
+        given: "Field with string value"
+        when: "require-type checks for 'string"
+        then: "Validation passes"
+        test: require-type-string-valid
+        confidence: 0.95
+
+      - name: require-type-rejects-wrong-type
+        given: "Field with number value"
+        when: "require-type checks for 'string"
+        then: "Validation error added"
+        test: require-type-string-invalid
+        confidence: 0.95
+
+      - name: require-type-supports-multiple-types
+        given: "Various data types"
+        when: "require-type validates"
+        then: "Correctly validates string, number, integer, boolean, list, hash-table"
+        tests:
+          - require-type-string-valid
+          - require-type-number-valid
+          - require-type-integer-valid
+          - require-type-boolean-valid
+        confidence: 0.95
+
+      - name: require-length-validates-minimum
+        given: "String field"
+        when: "require-length :min specified"
+        then: "Error if length below minimum"
+        tests:
+          - require-length-min-valid
+          - require-length-min-invalid
+        confidence: 0.95
+
+      - name: require-length-validates-maximum
+        given: "String field"
+        when: "require-length :max specified"
+        then: "Error if length exceeds maximum"
+        tests:
+          - require-length-max-valid
+          - require-length-max-invalid
+        confidence: 0.95
+
+      - name: require-length-validates-range
+        given: "String field"
+        when: "require-length :min and :max specified"
+        then: "Validates within bounds"
+        test: require-length-range-valid
+        confidence: 0.95
+
+      - name: require-range-validates-numeric-bounds
+        given: "Numeric field"
+        when: "require-range :min and/or :max specified"
+        then: "Validates number is within bounds"
+        tests:
+          - require-range-min-valid
+          - require-range-min-invalid
+          - require-range-max-valid
+          - require-range-max-invalid
+        confidence: 0.95
+
+      - name: require-pattern-validates-regex
+        given: "String field"
+        when: "require-pattern with regex"
+        then: "Validates string matches pattern"
+        tests:
+          - require-pattern-valid
+          - require-pattern-invalid
+        confidence: 0.95
+
+      - name: validate-macro-collects-multiple-errors
+        given: "Data failing multiple validation checks"
+        when: "validate macro runs multiple checks"
+        then: "All errors collected and returned in single 422 response"
+        test: validate-macro-multiple-errors
+        confidence: 0.95
+
+      - name: validate-macro-signals-http-condition
+        given: "Data failing validation"
+        when: "validate macro completes"
+        then: "Signals snooze:http-condition with status 422"
+        test: validate-macro-signal-error
+        confidence: 0.95
+
+  response:
+    source: tests/response-tests.lisp
+    scenarios:
+      - name: json-response-creates-proper-format
+        given: "Data to serialize"
+        when: "json-response called"
+        then: "Returns (status headers body) list with JSON content-type"
+        confidence: 0.92
+
+      - name: ok-returns-200
+        given: "Response data"
+        when: "ok called"
+        then: "Returns 200 status with JSON data"
+        confidence: 0.95
+
+      - name: created-returns-201
+        given: "Created resource data"
+        when: "created called"
+        then: "Returns 201 status with JSON data"
+        confidence: 0.95
+
+      - name: no-content-returns-204
+        given: "No response data needed"
+        when: "no-content called"
+        then: "Returns 204 status with empty body"
+        confidence: 0.95
+
+      - name: not-found-signals-404
+        given: "Resource not found"
+        when: "not-found called"
+        then: "Signals HTTP 404 condition with error body"
+        confidence: 0.95
+
+      - name: bad-request-signals-400
+        given: "Invalid request"
+        when: "bad-request called"
+        then: "Signals HTTP 400 condition with error body"
+        confidence: 0.95
+
+      - name: error-response-custom-status
+        given: "Custom error status code"
+        when: "error-response called with status"
+        then: "Signals HTTP condition with specified status and error body"
+        confidence: 0.93
+
+  sqlite:
+    source: tests/sqlite-tests.lisp
+    scenarios:
+      - name: with-db-manages-connection
+        given: "Database path"
+        when: "with-db executes body"
+        then: "*db* bound, connection opened and closed"
+        confidence: 0.93
+
+      - name: ensure-table-creates-if-not-exists
+        given: "Table definition"
+        when: "ensure-table called"
+        then: "Table created if doesn't exist, no error if exists"
+        confidence: 0.93
+
+      - name: last-insert-id-returns-rowid
+        given: "Row just inserted"
+        when: "last-insert-id called"
+        then: "Returns rowid of last insert"
+        confidence: 0.93
+
+      - name: row-to-hash-converts-row
+        given: "Database row as list and column names"
+        when: "row-to-hash called"
+        then: "Returns hash table with string keys mapped to values"
+        confidence: 0.90
+
+      - name: rows-to-json-converts-multiple
+        given: "List of rows"
+        when: "rows-to-json called"
+        then: "Returns list of hash tables"
+        confidence: 0.90
+
+      - name: with-transaction-commits-on-success
+        given: "Database operations in transaction"
+        when: "with-transaction completes normally"
+        then: "Changes committed"
+        confidence: 0.90
+
+      - name: with-transaction-rolls-back-on-error
+        given: "Database operations in transaction"
+        when: "Error occurs in body"
+        then: "Changes rolled back"
+        confidence: 0.90
+
+  integration:
+    source: tests/integration-tests.lisp
+    scenarios:
+      - name: route-matching-integrates-with-snooze
+        given: "Defined routes with patterns"
+        when: "Request matches pattern"
+        then: "Correct route handler invoked"
+        confidence: 0.88
+
+scenarios_from_examples:
+  hello-world:
+    source: examples/hello-world.lisp
+    scenarios:
+      - name: minimal-api-quickstart
+        given: "Empty project"
+        when: "Define API with single GET route"
+        then: "Server starts and responds to requests"
+        steps:
+          - "Define package using :quickapi"
+          - "Call defapi to create API instance"
+          - "Define api-get route returning hash table"
+          - "Call start to launch server"
+          - "Server responds with JSON on GET /"
+        confidence: 0.95
+
+  todo-api:
+    source: examples/todo-api.lisp
+    scenarios:
+      - name: complete-crud-workflow
+        given: "Empty database"
+        when: "Complete CRUD operations performed"
+        then: "All operations work correctly"
+        steps:
+          - "Initialize database with ensure-table"
+          - "Create todo via POST /todos"
+          - "List todos via GET /todos"
+          - "Get single todo via GET /todos/:id"
+          - "Update todo via PUT /todos/:id"
+          - "Toggle completion via POST /todos/:id/toggle"
+          - "Delete todo via DELETE /todos/:id"
+        confidence: 0.92
+
+      - name: path-parameter-extraction
+        given: "Route with :id parameter"
+        when: "Request matches pattern"
+        then: "id variable automatically bound in handler"
+        routes:
+          - "GET /todos/:id"
+          - "PUT /todos/:id"
+          - "DELETE /todos/:id"
+          - "POST /todos/:id/toggle"
+        confidence: 0.93
+
+      - name: request-body-validation
+        given: "POST/PUT request with body"
+        when: "validate macro checks body"
+        then: "422 response if validation fails, proceeds if valid"
+        validations:
+          - "require-fields \"title\" on POST"
+          - "require-type \"title\" 'string"
+          - "require-length \"title\" :min 1 :max 200"
+        confidence: 0.95
+
+      - name: database-persistence
+        given: "SQLite database"
+        when: "CRUD operations performed"
+        then: "Data persists across requests"
+        operations:
+          - "Insert with sqlite:insert"
+          - "Select with sqlite:select"
+          - "Update with sqlite:update-table"
+          - "Delete with sqlite:delete-from"
+        confidence: 0.93
+
+      - name: error-handling-not-found
+        given: "Request for non-existent todo"
+        when: "Handler checks existence"
+        then: "404 response with error body"
+        code: "(unless rows (not-found \"Todo not found\"))"
+        confidence: 0.95
+
+      - name: timestamp-generation
+        given: "New todo creation"
+        when: "make-timestamp called"
+        then: "ISO timestamp string created"
+        confidence: 0.90
+
+      - name: boolean-conversion
+        given: "SQLite integer (0/1) for boolean"
+        when: "Converting to JSON"
+        then: "Converted to true/false"
+        code: "(= completed 1)"
+        confidence: 0.90
+
+coverage_analysis:
+  well_covered:
+    - "Validation framework (20+ tests)"
+    - "Response helpers"
+    - "Database helpers"
+    - "Complete CRUD workflow (todo example)"
+    - "Path parameter extraction"
+    - "Error handling"
+
+  partial_coverage:
+    - "Route registry and matching (integration tests exist)"
+    - "Server start/stop (tested manually)"
+    - "JSON serialization edge cases"
+
+  gaps:
+    - "Query parameter extraction (not implemented)"
+    - "Request header access (not implemented)"
+    - "Concurrent request handling"
+    - "Error recovery scenarios"
+    - "Large payload handling"
+    - "Complex URI patterns (multiple params, nested resources)"
+
+behavior_properties_inferred:
+  - property: "Validation errors are collected, not fail-fast"
+    evidence: "validate-macro-multiple-errors test"
+    confidence: 0.95
+
+  - property: "Path parameters are automatically extracted from URI patterns"
+    evidence: "todo-api example uses id without declaration"
+    confidence: 0.93
+
+  - property: "Response serialization is automatic for hash tables and lists"
+    evidence: "All examples return hash tables directly"
+    confidence: 0.92
+
+  - property: "Database connections are automatically managed"
+    evidence: "with-db macro pattern"
+    confidence: 0.93
+
+  - property: "Transactions roll back on error"
+    evidence: "with-transaction uses sqlite:with-transaction"
+    confidence: 0.90
+
+  - property: "Empty strings are treated as missing for required fields"
+    evidence: "require-fields-empty-string test"
+    confidence: 0.95
+
+  - property: "Validation skips nil values for type/length/range checks"
+    evidence: "require-type/length/range tests check (when value ...)"
+    confidence: 0.90
+
+  - property: "Error responses have consistent format"
+    evidence: "format-error function creates standardized structure"
+    confidence: 0.93

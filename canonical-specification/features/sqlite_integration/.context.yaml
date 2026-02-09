@@ -1,0 +1,144 @@
+---
+# Context Bundle: SQLite Integration Feature
+# Auto-generated for canon-genesis and sub-agent workflows
+
+feature:
+  name: sqlite_integration
+  status: stable
+  confidence: 0.93
+  category: core
+
+summary: |
+  SQLite integration provides database helpers for managing SQLite connections,
+  creating tables, and executing queries. The with-db macro binds *db* for database
+  operations within a lexical scope, and ensure-table creates tables if they don't exist.
+
+key_concepts:
+  - "with-db: Macro binding *db* connection for queries"
+  - "*db*: Special variable for database connection"
+  - "ensure-table: Create table if not exists"
+  - "query/query-all: Execute SQL queries"
+  - "execute: Execute SQL commands (INSERT, UPDATE, DELETE)"
+
+primary_contracts:
+  - with-db: "Bind *db* connection to SQLite database file"
+  - ensure-table: "Create table with schema if it doesn't exist"
+  - query: "Execute query, return first row as hash table"
+  - query-all: "Execute query, return all rows as list of hash tables"
+  - execute: "Execute command (INSERT, UPDATE, DELETE), return affected rows"
+  - last-insert-rowid: "Get ID of last inserted row"
+
+core_properties:
+  - "*db* only bound within with-db lexical scope"
+  - "Connections automatically closed on scope exit"
+  - "Query results returned as hash tables (:test 'equal)"
+  - "ensure-table is idempotent (safe to call multiple times)"
+  - "Transactions not explicitly managed (SQLite auto-commit)"
+
+dependencies:
+  - sqlite: "cl-sqlite library for database operations"
+  - request_context: "*db* special variable convention"
+  - json_serialization: "Query results as hash tables (JSON-compatible)"
+
+implementation_files:
+  - src/sqlite.lisp: "All database helpers"
+  - src/package.lisp: "Exported database functions"
+
+test_files:
+  - tests/sqlite-tests.lisp: "6 comprehensive tests"
+
+example_usage: |
+  ;; Create table and query
+  (with-db (db "todos.db")
+    (ensure-table *db*
+      "todos"
+      '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+        ("title" "TEXT NOT NULL")
+        ("completed" "BOOLEAN DEFAULT 0")))
+
+    (execute *db* "INSERT INTO todos (title) VALUES (?)" "Buy milk")
+    (let ((id (last-insert-rowid *db*)))
+      (query *db* "SELECT * FROM todos WHERE id = ?" id)))
+
+  ;; Route with database
+  (api-get "/todos" ()
+    (with-db (db "todos.db")
+      (ok :todos (query-all *db* "SELECT * FROM todos"))))
+
+  (api-post "/todos" ()
+    (validate (require-fields *body* "title"))
+    (with-db (db "todos.db")
+      (execute *db* "INSERT INTO todos (title) VALUES (?)"
+               (gethash "title" *body*))
+      (created :id (last-insert-rowid *db*))))
+
+helper_signatures:
+  with-db: "((var db-path) &body body)"
+  ensure-table: "(db table-name schema)"
+  query: "(db sql &rest params)"
+  query-all: "(db sql &rest params)"
+  execute: "(db sql &rest params)"
+  last-insert-rowid: "(db)"
+
+schema_format: |
+  ;; List of (column-name type-constraint) pairs
+  '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+    ("title" "TEXT NOT NULL")
+    ("completed" "BOOLEAN DEFAULT 0")
+    ("created_at" "DATETIME DEFAULT CURRENT_TIMESTAMP"))
+
+query_result_format:
+  query: |
+    ;; Single row as hash table
+    #<HASH-TABLE :TEST EQUAL {
+      "id" => 1,
+      "title" => "Buy milk",
+      "completed" => 0
+    }>
+
+  query-all: |
+    ;; List of hash tables
+    (#<HASH-TABLE {...}> #<HASH-TABLE {...}> #<HASH-TABLE {...}>)
+
+parameterized_queries:
+  - "Use ? placeholders for parameters"
+  - "Pass parameters as additional arguments to query/execute"
+  - "Prevents SQL injection"
+  - "Example: (query *db* \"SELECT * FROM users WHERE id = ?\" user-id)"
+
+common_patterns:
+  - "Simple query: (query-all *db* \"SELECT * FROM table\")"
+  - "Parameterized query: (query *db* \"SELECT * FROM table WHERE id = ?\" id)"
+  - "Insert: (execute *db* \"INSERT INTO table (field) VALUES (?)\" value)"
+  - "Update: (execute *db* \"UPDATE table SET field = ? WHERE id = ?\" value id)"
+  - "Delete: (execute *db* \"DELETE FROM table WHERE id = ?\" id)"
+  - "Get insert ID: (last-insert-rowid *db*)"
+
+database_lifecycle:
+  - "Connection opened by with-db"
+  - "Connection automatically closed on scope exit (even on error)"
+  - "Database file created if it doesn't exist"
+  - "No explicit transaction management (SQLite auto-commit)"
+
+known_issues:
+  - "No explicit transaction support (relies on SQLite auto-commit)"
+  - "No connection pooling (new connection per request)"
+  - "Thread-safety of *db* special variable unclear"
+
+design_decisions:
+  - "with-db macro: Ensures connection cleanup"
+  - "Hash tables for results: JSON-compatible, matches *body* format"
+  - "ensure-table idempotent: Safe for startup code"
+  - "Parameterized queries: SQL injection prevention"
+
+related_features:
+  - request_context: "*db* special variable convention"
+  - json_serialization: "Query results as hash tables (auto-serialize to JSON)"
+  - validation: "Validate data before database operations"
+
+vocabulary_references:
+  - Database Connection: "SQLite connection (*db*)"
+  - Query: "SELECT statement returning rows"
+  - Execute: "INSERT/UPDATE/DELETE statement"
+  - Schema: "Table structure definition"
+  - Parameterized Query: "SQL with ? placeholders for safe parameter binding"

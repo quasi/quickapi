@@ -1,0 +1,64 @@
+---
+# Canon Metadata - Tracking and health information
+# Maintained by canon-check and other Canon skills
+
+infrastructure:
+  version: "0.2.0"
+  created_with: canon-initiate@0.2.0
+  last_migrated: null
+
+tracking:
+  created: "2026-01-24T00:00:00Z"
+  last_check: "2026-01-25T01:00:00Z"
+  last_modified: "2026-01-25T01:00:00Z"
+
+checkpoints:
+  - skill: canon-initiate
+    state_file: .canon-initiation/state.yaml
+    status: complete
+    last_activity: "2026-01-25T00:00:00Z"
+    phase: reconciliation
+    completion_date: "2026-01-24T00:00:00Z"
+
+changelog:
+  - date: "2026-01-24"
+    type: canon-initiated
+    skill: canon-initiate
+    summary: "Canon extracted via multi-source triangulation (7 features, 0.92 confidence)"
+
+  - date: "2026-01-25"
+    type: observations-resolved
+    skill: canon-initiate
+    summary: "Resolved OBS-201 (stale exports) and OBS-301 (route registry tests)"
+    details:
+      - "Removed stale exports: path-param, query-param, header"
+      - "Added 20 unit tests for route registry"
+      - "All 168 tests passing (100% pass rate)"
+
+  - date: "2026-01-25"
+    type: features-completed
+    skill: canon-initiate
+    summary: "Completed 4 missing feature specifications (100% coverage)"
+    features_added:
+      - request_context
+      - response_helpers
+      - sqlite_integration
+      - error_handling
+
+  - date: "2026-01-25"
+    type: documentation-generated
+    skill: canon-document
+    summary: "Generated agent-oriented documentation (AGENT.md, INDEX.md files)"
+    artifacts:
+      - AGENT.md
+      - canon/INDEX.md
+      - canon/core/INDEX.md
+
+issues_history:
+  - date: "2026-01-25"
+    check_id: chk-001
+    checker: canon-check
+    issues_found: 8
+    issues_fixed: 1
+    plan_file: .canon-check-plan.md
+    summary: "Missing .canon-meta.yaml (AUTO-FIXED), 7 missing context bundles (MANUAL)"

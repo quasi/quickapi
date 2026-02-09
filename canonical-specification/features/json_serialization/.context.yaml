@@ -1,0 +1,106 @@
+---
+# Context Bundle: JSON Serialization Feature
+# Auto-generated for canon-genesis and sub-agent workflows
+
+feature:
+  name: json_serialization
+  status: stable
+  confidence: 0.95
+  category: core
+
+summary: |
+  Automatic JSON serialization and deserialization for HTTP requests and responses.
+  Route macros handle JSON body parsing for POST/PUT/PATCH and serialize return
+  values to JSON. Uses com.inuoe.jzon for modern, performant JSON handling.
+
+key_concepts:
+  - "Automatic Serialization: Return values → JSON responses"
+  - "Automatic Deserialization: JSON body → hash table (*body*)"
+  - "Content-Type: application/json for requests and responses"
+  - "Hash Tables: Use :test 'equal for string keys (JSON objects)"
+  - "JSON Types: string, number, boolean, null, array, object"
+
+primary_contracts:
+  - "Route return values automatically serialized to JSON"
+  - "POST/PUT/PATCH bodies automatically parsed as JSON"
+  - "*body* special variable contains parsed hash table"
+  - "Content-Type: application/json header auto-added to responses"
+  - "Hash tables must use :test 'equal for JSON objects"
+
+core_properties:
+  - "All responses have Content-Type: application/json"
+  - "Empty hash table {} serializes to empty JSON object"
+  - "nil serializes to JSON null"
+  - "Lists serialize to JSON arrays"
+  - "Hash tables (equal test) serialize to JSON objects"
+
+dependencies:
+  - com.inuoe.jzon: "Modern JSON library"
+  - routing: "Route macros provide serialization infrastructure"
+  - request_context: "*body* special variable"
+
+implementation_files:
+  - src/core.lisp:174-209: "define-json-route macro"
+  - src/package.lisp: "Exports (body) helper"
+
+test_files:
+  - tests/integration-tests.lisp: "End-to-end JSON tests"
+
+example_usage: |
+  ;; Return value automatically serialized
+  (api-get "/user/:id" ()
+    (let ((user (make-hash-table :test 'equal)))
+      (setf (gethash "id" user) id)
+      (setf (gethash "name" user) "Alice")
+      (ok user)))
+
+  ;; Request body automatically parsed to *body*
+  (api-post "/users" ()
+    (let ((name (gethash "name" *body*))
+          (email (gethash "email" *body*)))
+      (ok (create-user name email))))
+
+common_patterns:
+  - "Hash table creation: (make-hash-table :test 'equal)"
+  - "Access body field: (gethash \"field\" *body*)"
+  - "Return JSON object: (ok hash-table)"
+  - "Return JSON array: (ok (list obj1 obj2 obj3))"
+  - "Return scalar: (ok 42) or (ok \"text\")"
+
+json_type_mapping:
+  lisp_to_json:
+    - "hash-table (:test equal) → JSON object"
+    - "list → JSON array"
+    - "string → JSON string"
+    - "number → JSON number"
+    - "t → true"
+    - "nil → null"
+  json_to_lisp:
+    - "JSON object → hash-table (:test equal)"
+    - "JSON array → list"
+    - "JSON string → string"
+    - "JSON number → number"
+    - "true → t"
+    - "null → nil"
+
+known_issues:
+  - "No tests for malformed JSON (edge case coverage gap)"
+  - "No tests for non-JSON content-type handling"
+  - "No tests for very large payloads"
+
+design_decisions:
+  - "com.inuoe.jzon chosen for modern JSON handling (ADR pending)"
+  - "Hash tables with :test 'equal required for string keys"
+  - "Automatic serialization: focus on business logic, not format"
+
+related_features:
+  - routing: "Route macros provide serialization hooks"
+  - request_context: "*body* contains parsed JSON"
+  - validation: "Validate parsed JSON data"
+  - error_handling: "JSON error responses"
+
+vocabulary_references:
+  - Request Body: "Parsed JSON payload (hash table)"
+  - Response: "Automatically JSON-serialized"
+  - Hash Table: "Common Lisp representation of JSON objects"
+  - Content-Type: "application/json for all requests/responses"

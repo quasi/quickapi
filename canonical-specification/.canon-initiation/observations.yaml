@@ -1,0 +1,361 @@
+---
+# Observations from Multi-Source Triangulation
+# Organized by category: convergent, docs_only, code_only, conflict, coverage_gap, etc.
+
+observations:
+  convergent:
+    - id: OBS-001
+      category: convergent
+      title: "Five route macros fully implemented and documented"
+      sources: [code, docs, tests, examples]
+      confidence: 0.97
+      description: "api-get, api-post, api-put, api-patch, api-delete all present in code, documented in README, used in examples, tested in integration tests"
+      location:
+        code: "src/core.lisp:211-274"
+        docs: "README.md:13, docs/01-quickstart.md, docs/02-tutorial.md"
+        examples: "examples/todo-api.lisp"
+        tests: "tests/integration-tests.lisp"
+      action: accept
+
+    - id: OBS-002
+      category: convergent
+      title: "Automatic JSON serialization works as documented"
+      sources: [code, docs, examples]
+      confidence: 0.95
+      description: "define-json-route macro automatically serializes return values, matches documented behavior"
+      location:
+        code: "src/core.lisp:174-209 (define-json-route)"
+        docs: "README.md:14"
+        examples: "All examples return hash tables directly"
+      action: accept
+
+    - id: OBS-003
+      category: convergent
+      title: "Validation framework complete and well-tested"
+      sources: [code, docs, tests, examples]
+      confidence: 0.97
+      description: "All five validators implemented, documented, extensively tested (20+ tests), used in examples"
+      location:
+        code: "src/validation.lisp"
+        docs: "README.md:123-133"
+        tests: "tests/validation-tests.lisp (20+ tests)"
+        examples: "examples/todo-api.lisp:74-77, 92-94"
+      action: accept
+
+    - id: OBS-004
+      category: convergent
+      title: "Path parameter auto-extraction implemented"
+      sources: [code, docs, examples]
+      confidence: 0.93
+      description: "parse-uri-pattern extracts :param segments, binds as variables in route body"
+      location:
+        code: "src/core.lisp:49-58 (parse-uri-pattern), 180-188 (parameter extraction)"
+        docs: "README.md:97-109"
+        examples: "examples/todo-api.lisp uses id throughout"
+      action: accept
+
+    - id: OBS-005
+      category: convergent
+      title: "Response helpers implemented and tested"
+      sources: [code, docs, tests]
+      confidence: 0.95
+      description: "ok, created, no-content, bad-request, not-found, error-response all working"
+      location:
+        code: "src/response.lisp"
+        docs: "README.md:146"
+        tests: "tests/response-tests.lisp"
+      action: accept
+
+    - id: OBS-006
+      category: convergent
+      title: "SQLite integration complete"
+      sources: [code, docs, tests, examples]
+      confidence: 0.93
+      description: "with-db, ensure-table, last-insert-id, row-to-hash, rows-to-json, with-transaction all implemented"
+      location:
+        code: "src/sqlite.lisp"
+        docs: "README.md:149-164, docs/03-database.md"
+        tests: "tests/sqlite-tests.lisp"
+        examples: "examples/todo-api.lisp (full CRUD)"
+      action: accept
+
+    - id: OBS-007
+      category: convergent
+      title: "Server start/stop lifecycle"
+      sources: [code, docs, examples]
+      confidence: 0.95
+      description: "start and stop functions implemented, documented, used in examples"
+      location:
+        code: "src/core.lisp:119-142"
+        docs: "README.md:64-66"
+        examples: "examples/todo-api.lisp:149-152"
+      action: accept
+
+  code_only:
+    - id: OBS-101
+      category: code_only
+      title: "Route registry infrastructure"
+      sources: [code]
+      confidence: 0.85
+      description: "Route registry, parse-uri-pattern, match-uri-to-route, register-route implemented but not explicitly documented as features"
+      location:
+        code: "src/core.lisp:13-117 (route registry system)"
+        commit: "6e9351a - recent addition"
+      impact: "Core infrastructure for path parameters, but implementation detail not exposed to users"
+      action: "Document in architecture section, not user-facing feature"
+      rationale: "Implementation detail that enables path parameters - users benefit without needing to know internals"
+
+    - id: OBS-102
+      category: code_only
+      title: "quickapi-resource-name custom function"
+      sources: [code]
+      confidence: 0.82
+      description: "Custom Snooze resource name function for route matching"
+      location:
+        code: "src/core.lisp:101-117"
+      impact: "Integration point with Snooze, not user-facing"
+      action: "Note in technical documentation, not public API"
+
+    - id: OBS-103
+      category: code_only
+      title: "route-entry struct"
+      sources: [code]
+      confidence: 0.85
+      description: "Internal data structure for route registry entries"
+      location:
+        code: "src/core.lisp:42-47"
+      impact: "Implementation detail"
+      action: "Internal only, no user documentation needed"
+
+  docs_only:
+    - id: OBS-201
+      category: docs_only
+      title: "path-param, query-param, header functions documented but not implemented"
+      sources: [docs]
+      confidence: 0.70
+      description: "README mentions path-param, query-param, header in 'Request context' section, exported from package, but no implementations found"
+      location:
+        docs: "README.md:18"
+        exports: "src/package.lisp:25-27"
+        code: "No implementations in src/"
+      impact: "Documentation overpromises or exports are stale"
+      action: "VERIFY: Are these planned features or documentation error?"
+      questions:
+        - "Should these be implemented?"
+        - "Should exports be removed?"
+        - "Are they legacy from earlier version?"
+      blocking: false
+      priority: medium
+      resolution:
+        status: resolved
+        resolved_at: "2026-01-25"
+        resolution_type: removed_stale_exports
+        commit: c2c8e31
+        description: "Removed stale exports from src/package.lisp - these were planned but superseded by automatic path parameter binding"
+        verification: "Exports removed, all 168 tests still passing"
+
+  coverage_gaps:
+    - id: OBS-301
+      category: coverage_gap
+      title: "No tests for route registry and URI matching"
+      sources: [code]
+      confidence: 0.85
+      description: "parse-uri-pattern, match-uri-to-route, register-route have no dedicated unit tests"
+      location:
+        code: "src/core.lisp:49-99"
+        tests: "integration-tests.lisp tests end-to-end but not unit-level"
+      impact: "Core functionality under-tested at unit level"
+      action: "Add unit tests for route matching edge cases"
+      suggested_tests:
+        - "URI with multiple parameters"
+        - "URI with no parameters"
+        - "Ambiguous patterns"
+        - "URL-encoded parameter values"
+        - "Case sensitivity"
+      priority: high
+      resolution:
+        status: resolved
+        resolved_at: "2026-01-25"
+        resolution_type: added_unit_tests
+        commit: c2c8e31
+        description: "Added comprehensive test suite with 20 new unit tests for route registry"
+        tests_added:
+          - "tests/route-registry-tests.lisp (238 lines, 20 tests)"
+          - "parse-uri-pattern: 7 tests (empty, literals, params, edge cases)"
+          - "match-uri-to-route: 11 tests (matching, extraction, methods, query strings)"
+          - "register-route: 2 tests (storage, overwrites)"
+        verification: "All 168 tests passing (100% pass rate)"
+
+    - id: OBS-302
+      category: coverage_gap
+      title: "No tests for server start/stop"
+      sources: []
+      confidence: 0.80
+      description: "start and stop functions not tested"
+      location:
+        code: "src/core.lisp:119-142"
+      impact: "Server lifecycle untested"
+      action: "Add server lifecycle tests or document as integration-tested manually"
+      priority: medium
+
+    - id: OBS-303
+      category: coverage_gap
+      title: "No tests for JSON parsing edge cases"
+      sources: []
+      confidence: 0.75
+      description: "Malformed JSON, large payloads, special characters not tested"
+      impact: "Error handling for bad input unclear"
+      action: "Add negative tests for JSON parsing"
+      suggested_tests:
+        - "Malformed JSON request body"
+        - "Non-JSON content-type"
+        - "Empty body on POST"
+        - "Very large JSON payload"
+      priority: medium
+
+    - id: OBS-304
+      category: coverage_gap
+      title: "No concurrency tests"
+      sources: []
+      confidence: 0.70
+      description: "No tests for concurrent request handling"
+      impact: "Thread-safety of *route-registry* and other globals unclear"
+      action: "Document concurrency guarantees or add tests"
+      priority: low
+      notes: "May be acceptable for single-threaded use case"
+
+  design_observations:
+    - id: OBS-401
+      category: design_note
+      title: "Lambda-list parameter deprecated but still required"
+      sources: [code, docs]
+      confidence: 0.88
+      description: "Route macros require lambda-list parameter but ignore it - could be optional or removed"
+      location:
+        code: "src/core.lisp:177-180 (declare ignore lambda-list)"
+        docs: "Comments state it's deprecated"
+      impact: "Slightly awkward API - requires empty () in all routes"
+      action: "Consider making lambda-list optional in future version"
+      evolution: "API evolved from manual to automatic parameter extraction"
+      blocking: false
+      priority: low
+
+    - id: OBS-402
+      category: design_note
+      title: "Hash tables with :test 'equal for JSON data"
+      sources: [code, examples]
+      confidence: 0.95
+      description: "JSON objects consistently use (make-hash-table :test 'equal) for string keys"
+      location:
+        examples: "examples/todo-api.lisp:40"
+        code: "src/validation.lisp:23, src/response.lisp:33"
+      impact: "Correct choice - JSON keys are strings, need 'equal not 'eql"
+      action: "Document best practice in user guide"
+      priority: low
+
+    - id: OBS-403
+      category: design_note
+      title: "No request/response middleware hooks"
+      sources: [docs]
+      confidence: 0.95
+      description: "Explicitly no middleware - stated in README 'No middleware'"
+      location:
+        docs: "README.md:20"
+      impact: "Design decision - simplicity over extensibility"
+      action: "Accepted as design philosophy"
+      rationale: "Keep it simple, avoid framework complexity"
+
+  positive_findings:
+    - id: OBS-501
+      category: positive
+      title: "Excellent ABOUTME comments"
+      sources: [code]
+      confidence: 0.97
+      description: "Every source file has clear ABOUTME comment explaining purpose"
+      location: "All .lisp files in src/"
+      impact: "Great for code maintainability and onboarding"
+      action: "Continue this practice"
+
+    - id: OBS-502
+      category: positive
+      title: "Comprehensive example (todo-api)"
+      sources: [examples]
+      confidence: 0.95
+      description: "examples/todo-api.lisp demonstrates all features in working code"
+      impact: "Excellent learning resource"
+      action: "Keep updated as features evolve"
+
+    - id: OBS-503
+      category: positive
+      title: "Consistent error format"
+      sources: [code]
+      confidence: 0.95
+      description: "All errors use format-error for standardized {error, message, details} structure"
+      location: "src/response.lisp:31-38"
+      impact: "Predictable API behavior for clients"
+      action: "Document error format schema"
+
+    - id: OBS-504
+      category: positive
+      title: "Validation collects all errors"
+      sources: [code, tests]
+      confidence: 0.97
+      description: "Validation doesn't fail-fast - collects all errors and returns them together"
+      location: "src/validation.lisp:30-49"
+      impact: "Better UX - users see all validation issues in one response"
+      action: "Highlight in documentation as UX feature"
+
+  recommendations:
+    - id: REC-001
+      priority: high
+      title: "Resolve path-param/query-param/header exports"
+      description: "Either implement these functions or remove from exports"
+      blocking: false
+
+    - id: REC-002
+      priority: high
+      title: "Add unit tests for route matching"
+      description: "Test parse-uri-pattern and match-uri-to-route with edge cases"
+      blocking: false
+
+    - id: REC-003
+      priority: medium
+      title: "Document error response format schema"
+      description: "Provide JSON schema or examples of error responses"
+      blocking: false
+
+    - id: REC-004
+      priority: medium
+      title: "Add negative tests for JSON parsing"
+      description: "Test malformed JSON, empty bodies, wrong content-types"
+      blocking: false
+
+    - id: REC-005
+      priority: low
+      title: "Consider making lambda-list optional"
+      description: "Route macros could accept (api-get uri &body body) without empty ()"
+      blocking: false
+
+    - id: REC-006
+      priority: low
+      title: "Document concurrency model"
+      description: "Clarify thread-safety of route registry and special variables"
+      blocking: false
+
+summary:
+  total_observations: 24
+  by_category:
+    convergent: 7
+    code_only: 3
+    docs_only: 1
+    coverage_gap: 4
+    design_note: 3
+    positive: 4
+    recommendation: 6
+
+  blocking_issues: 0
+  high_priority: 2
+  medium_priority: 3
+  low_priority: 3
+
+  overall_assessment: "High quality implementation with strong documentation and test coverage. Few minor gaps (path-param exports, route matching tests) but nothing blocking. Design philosophy is clear and consistently applied."

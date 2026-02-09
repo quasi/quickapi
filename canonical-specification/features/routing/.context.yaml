@@ -1,0 +1,92 @@
+---
+# Context Bundle: Routing Feature
+# Auto-generated for canon-genesis and sub-agent workflows
+
+feature:
+  name: routing
+  status: stable
+  confidence: 0.95
+  category: core
+
+summary: |
+  Routing enables defining HTTP endpoints via five route macros (api-get, api-post,
+  api-put, api-patch, api-delete). Routes support URI patterns with path parameters
+  that are automatically extracted and bound as variables in handler code.
+
+key_concepts:
+  - "Route: Mapping from HTTP method + URI pattern to handler function"
+  - "URI Pattern: Template with :param placeholders (e.g., /users/:id)"
+  - "Path Parameter: Variable extracted from URI, auto-bound in handler"
+  - "Route Macro: api-get, api-post, api-put, api-patch, api-delete"
+  - "Route Registry: Global registry enabling flexible pattern matching"
+
+primary_contracts:
+  - api-get: "Define GET route with automatic parameter extraction"
+  - api-post: "Define POST route with JSON body parsing"
+  - api-put: "Define PUT route for updates"
+  - api-patch: "Define PATCH route for partial updates"
+  - api-delete: "Define DELETE route for removal"
+  - defapi: "Define API with metadata (name, version, description)"
+  - start: "Start HTTP server on specified port"
+  - stop: "Stop running HTTP server"
+
+core_properties:
+  - "Routes are unique per (method, URI pattern) combination"
+  - "Path parameters automatically bound as variables in handler"
+  - "Literal segments are case-insensitive"
+  - "Route registry is global (package-level special variable)"
+
+dependencies:
+  - snooze: "CLOS-based HTTP routing (~850 LoC)"
+  - hunchentoot: "HTTP server"
+  - json_serialization: "Automatic JSON response handling"
+  - request_context: "Special variables (*request*, *body*)"
+
+implementation_files:
+  - src/core.lisp:13-274: "Route macros, registry, pattern matching"
+  - src/package.lisp: "Exported symbols"
+
+test_files:
+  - tests/integration-tests.lisp: "End-to-end route tests"
+  - tests/route-registry-tests.lisp: "Unit tests for pattern matching (added 2026-01-25)"
+
+example_usage: |
+  (defapi my-api
+    :name "My API"
+    :version "1.0"
+    :description "Example API")
+
+  (api-get "/users/:id" ()
+    (ok (make-hash-table :test 'equal)
+        :user-id id))
+
+  (start :port 8080)
+
+common_patterns:
+  - "Simple GET: (api-get \"/resource\" () (ok data))"
+  - "Path param: (api-get \"/resource/:id\" () (ok (find-by-id id)))"
+  - "POST with body: (api-post \"/resource\" () (validate ...) (ok (create *body*)))"
+  - "Multiple params: (api-get \"/users/:user-id/posts/:post-id\" () ...)"
+
+known_issues:
+  - "Lambda-list () is deprecated but still required (future: make optional)"
+  - "parse-uri-pattern needs more unit tests (edge cases, URL encoding)"
+
+design_decisions:
+  - "Route registry architecture (commit 6e9351a, 2026-01)"
+  - "Snooze as routing library (ADR-004)"
+  - "Parameter symbols interned in :quickapi package for hygiene"
+
+related_features:
+  - json_serialization: "Response handling"
+  - request_context: "Special variables in handler"
+  - validation: "Validate request data before processing"
+  - error_handling: "Standardized error responses"
+
+vocabulary_references:
+  - API: "Instance of REST API server (defapi)"
+  - Route: "HTTP method + URI pattern + handler"
+  - URI Pattern: "Template with :param placeholders"
+  - Path Parameter: "Variable extracted from URI"
+  - Route Macro: "api-get, api-post, etc."
+  - Handler: "Business logic body of route"

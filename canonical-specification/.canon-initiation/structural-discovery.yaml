@@ -1,0 +1,304 @@
+---
+# Pass 1: Structural Discovery
+# Identifies features from CODE (not docs), compares with documentation claims
+
+pass: 1
+name: structural_discovery
+completed_at: "2026-01-24"
+
+codebase_structure:
+  src/:
+    - package.lisp        # Package and export definitions
+    - core.lisp           # Route macros, API definition, server management
+    - response.lisp       # Response helpers
+    - validation.lisp     # Validation framework
+    - sqlite.lisp         # Database helpers
+
+  tests/:
+    - package.lisp
+    - response-tests.lisp
+    - validation-tests.lisp
+    - sqlite-tests.lisp
+    - integration-tests.lisp
+    - tests.lisp
+
+  examples/:
+    - hello-world.lisp    # Minimal example
+    - todo-api.lisp       # Complete CRUD example
+
+  docs/:
+    - 01-quickstart.md
+    - 02-tutorial.md
+    - 03-database.md
+    - 04-deployment.md
+
+code_organization:
+  loading_order:
+    1: package.lisp       # Defines :quickapi package, exports
+    2: response.lisp      # Response construction (json-response, ok, created, etc.)
+    3: validation.lisp    # Validation framework (validate macro, validators)
+    4: core.lisp          # Route macros, defapi, start/stop
+    5: sqlite.lisp        # Database helpers
+
+features_identified:
+  routing:
+    status: convergent
+    sources: [code, docs, tests, examples]
+    confidence: 0.95
+    evidence:
+      code:
+        - "Route registry in *route-registry* hash table"
+        - "parse-uri-pattern for URI template parsing"
+        - "register-route for pattern registration"
+        - "match-uri-to-route for request matching"
+        - "5 route macros: api-get, api-post, api-put, api-patch, api-delete"
+      docs:
+        - "Claims 5 HTTP route macros"
+        - "Path parameter extraction documented"
+      tests:
+        - "integration-tests.lisp tests route matching"
+      examples:
+        - "All examples use route macros"
+    notes: "Recent addition (commit 6e9351a) - route registry and URI pattern matching"
+
+  json_serialization:
+    status: convergent
+    sources: [code, docs, examples]
+    confidence: 0.92
+    evidence:
+      code:
+        - "Automatic JSON serialization in define-json-route macro"
+        - "parse-json-body function for request parsing"
+        - "Uses com.inuoe.jzon:stringify and parse"
+      docs:
+        - "Claims automatic JSON for requests and responses"
+      examples:
+        - "All examples return hash tables, automatically serialized"
+
+  validation:
+    status: convergent
+    sources: [code, docs, tests]
+    confidence: 0.95
+    evidence:
+      code:
+        - "validation.lisp: validate macro"
+        - "5 validators: require-fields, require-type, require-length, require-range, require-pattern"
+        - "validation-error condition"
+        - "Automatic 422 responses on validation failure"
+      docs:
+        - "Documents all 5 validators"
+        - "Shows validation examples"
+      tests:
+        - "validation-tests.lisp: 20+ tests covering all validators"
+
+  request_context:
+    status: convergent
+    sources: [code, docs, examples]
+    confidence: 0.90
+    evidence:
+      code:
+        - "*request* special variable"
+        - "*body* special variable (auto-bound in POST/PUT/PATCH)"
+        - "Path parameters auto-extracted from URI patterns"
+        - "parse-json-body for body parsing"
+      docs:
+        - "Documents *request*, *body*, path-param, query-param, header"
+        - "Shows automatic path parameter binding"
+      examples:
+        - "Examples use *body* and path parameters extensively"
+    notes: "path-param, query-param, header exported but not implemented in code"
+
+  response_helpers:
+    status: convergent
+    sources: [code, docs, tests]
+    confidence: 0.95
+    evidence:
+      code:
+        - "response.lisp: json-response, ok, created, no-content"
+        - "Error helpers: bad-request, not-found, error-response"
+        - "Uses Snooze http-condition for errors"
+      docs:
+        - "Documents ok, created, no-content, bad-request, not-found, error-response"
+      tests:
+        - "response-tests.lisp tests all response helpers"
+
+  sqlite_integration:
+    status: convergent
+    sources: [code, docs, tests, examples]
+    confidence: 0.93
+    evidence:
+      code:
+        - "sqlite.lisp: with-db macro, ensure-table, last-insert-id"
+        - "Helpers: row-to-hash, rows-to-json, with-transaction"
+        - "Thin wrapper over cl-sqlite"
+      docs:
+        - "Documents all database helpers"
+        - "Tutorial shows complete database integration"
+      tests:
+        - "sqlite-tests.lisp tests database operations"
+      examples:
+        - "todo-api.lisp shows full CRUD with SQLite"
+
+  error_handling:
+    status: convergent
+    sources: [code, docs, examples]
+    confidence: 0.90
+    evidence:
+      code:
+        - "Standardized error format via format-error"
+        - "HTTP condition signaling via Snooze"
+        - "status-to-error-type for consistent error types"
+      docs:
+        - "Documents error response format"
+        - "Shows error handling examples"
+      examples:
+        - "Examples use not-found, validation errors"
+
+  uri_pattern_matching:
+    status: code_only
+    sources: [code, commit-history]
+    confidence: 0.85
+    evidence:
+      code:
+        - "Route registry system (commit 6e9351a)"
+        - "parse-uri-pattern with segment descriptors"
+        - "match-uri-to-route with literal/param matching"
+        - "quickapi-resource-name custom resource naming"
+      docs:
+        - "Not explicitly documented as a feature"
+        - "Path parameters documented but not the matching infrastructure"
+    notes: "Recently implemented, not yet documented in detail"
+
+divergences:
+  docs_only_exports:
+    category: docs_only
+    confidence: 0.70
+    description: "path-param, query-param, header exported but not implemented"
+    evidence:
+      exports: "Listed in package.lisp exports"
+      code: "No implementation found in codebase"
+      docs: "Mentioned in README as part of request context"
+    resolution: "Likely planned features or deprecated exports"
+
+entity_inventory:
+  special_variables:
+    - *api*              # Current API instance
+    - *server*           # Running Hunchentoot acceptor
+    - *request*          # Current Snooze request
+    - *body*             # Parsed JSON body
+    - *db*               # Database connection
+    - *route-registry*   # Route pattern registry
+    - *validation-errors* # Validation error collection
+
+  classes:
+    - api                # API metadata container
+
+  structs:
+    - route-entry        # Route registry entry
+
+  conditions:
+    - validation-error   # Validation failure condition
+
+  macros:
+    - defapi             # API definition
+    - api-get            # GET route
+    - api-post           # POST route
+    - api-put            # PUT route
+    - api-patch          # PATCH route
+    - api-delete         # DELETE route
+    - validate           # Validation wrapper
+    - with-db            # Database connection
+    - with-transaction   # Transaction wrapper
+
+  functions:
+    # Core
+    - start              # Start server
+    - stop               # Stop server
+    - parse-json-body    # Parse request body
+    - body               # Get parsed body
+    - register-route     # Register route pattern
+    - match-uri-to-route # Match request to route
+    - parse-uri-pattern  # Parse URI template
+
+    # Responses
+    - json-response      # Generic JSON response
+    - ok                 # 200 OK
+    - created            # 201 Created
+    - no-content         # 204 No Content
+    - bad-request        # 400 Bad Request
+    - not-found          # 404 Not Found
+    - error-response     # Generic error
+
+    # Validation
+    - require-fields     # Required field check
+    - require-type       # Type check
+    - require-length     # Length check
+    - require-range      # Range check
+    - require-pattern    # Pattern check
+    - field              # Get field value
+
+    # Database
+    - last-insert-id     # Get last insert ID
+    - ensure-table       # Create table if needed
+    - row-to-hash        # Convert row to hash
+    - rows-to-json       # Convert rows to list of hashes
+
+dependency_map:
+  external:
+    snooze:
+      used_for:
+        - defroute macro
+        - http-condition
+        - payload-as-string
+        - *resource-name-function*
+        - make-hunchentoot-app
+    hunchentoot:
+      used_for:
+        - easy-acceptor
+        - start/stop
+        - *dispatch-table*
+    com.inuoe.jzon:
+      used_for:
+        - parse (JSON parsing)
+        - stringify (JSON serialization)
+    cl-ppcre:
+      used_for:
+        - split (URI parsing)
+        - scan (pattern validation)
+    sqlite:
+      used_for:
+        - with-open-database
+        - create-table
+        - select
+        - insert
+        - update-table
+        - delete-from
+        - last-insert-rowid
+        - with-transaction
+
+  internal:
+    core.lisp:
+      depends_on: [package, response, validation]
+      exports: [defapi, api-*, start, stop, *request*, *body*]
+
+    response.lisp:
+      depends_on: [package]
+      exports: [json-response, ok, created, no-content, bad-request, not-found, error-response]
+
+    validation.lisp:
+      depends_on: [package]
+      exports: [validate, require-*, validation-error]
+
+    sqlite.lisp:
+      depends_on: [package]
+      exports: [with-db, ensure-table, last-insert-id, row-to-hash, rows-to-json, with-transaction]
+
+triangulation_summary:
+  convergent_features: 6
+  code_only_features: 1
+  docs_only_features: 1
+  conflicts: 0
+
+  high_confidence: 6  # >= 0.9
+  medium_confidence: 2  # 0.7-0.9
+  low_confidence: 0

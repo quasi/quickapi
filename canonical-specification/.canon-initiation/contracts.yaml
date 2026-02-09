@@ -1,0 +1,466 @@
+---
+# Pass 2: Contract Extraction
+# Extracts interface specifications from CODE
+
+pass: 2
+name: contract_extraction
+completed_at: "2026-01-24"
+
+contracts:
+  defapi:
+    type: macro
+    purpose: "Define an API with metadata"
+    signature: "(defapi symbol-name &key name version description)"
+    parameters:
+      symbol-name:
+        required: true
+        type: symbol
+        description: "API identifier symbol"
+      name:
+        required: false
+        type: string
+        default: "(string symbol-name)"
+        description: "Display name for the API"
+      version:
+        required: false
+        type: string
+        default: "\"1.0\""
+        description: "API version string"
+      description:
+        required: false
+        type: string
+        default: nil
+        description: "API description"
+    returns: "API instance"
+    side_effects: "Sets *api* to new API instance"
+    examples:
+      - code: "(defapi my-api :name \"My API\" :version \"1.0\")"
+      - code: "(defapi todo-api :name \"Todo API\" :version \"1.0\" :description \"Simple todo list API\")"
+
+  api-get:
+    type: macro
+    purpose: "Define a GET route with automatic JSON serialization"
+    signature: "(api-get uri (&rest lambda-list) &body body)"
+    parameters:
+      uri:
+        required: true
+        type: string
+        description: "URI pattern (e.g., \"/users/:id\")"
+        pattern: "Path segments separated by /, parameters prefixed with :"
+      lambda-list:
+        required: true
+        type: list
+        description: "Deprecated - path params are auto-extracted"
+        note: "Ignored if provided to prevent duplicates"
+      body:
+        required: true
+        type: forms
+        description: "Route handler body"
+    behavior:
+      - "Parses URI pattern to extract path parameter names"
+      - "Registers route in *route-registry*"
+      - "Creates Snooze defroute with extracted parameters"
+      - "Return value is automatically JSON-serialized"
+      - "Hash tables, lists, and other data types are serialized"
+    path_parameters:
+      extraction: "Automatic from URI pattern"
+      binding: "Bound as variables in body"
+      example: "\"/users/:id\" binds variable 'id'"
+    response:
+      automatic_serialization: true
+      content_type: "application/json"
+      default_status: 200
+    examples:
+      - code: "(api-get \"/\" () (make-hash-table))"
+      - code: "(api-get \"/users/:id\" () (find-user id))"
+
+  api-post:
+    type: macro
+    purpose: "Define a POST route with body parsing and JSON serialization"
+    signature: "(api-post uri (&rest lambda-list) &body body)"
+    parameters:
+      uri:
+        required: true
+        type: string
+        description: "URI pattern"
+      lambda-list:
+        required: true
+        type: list
+        description: "Deprecated - path params are auto-extracted"
+      body:
+        required: true
+        type: forms
+        description: "Route handler body"
+    behavior:
+      - "Automatically parses JSON request body"
+      - "Binds *body* to parsed hash table"
+      - "Extracts and binds path parameters"
+      - "Return value is JSON-serialized"
+    special_variables:
+      "*body*":
+        type: hash-table
+        description: "Parsed JSON request body"
+        availability: "Bound during request handling"
+    response:
+      automatic_serialization: true
+      content_type: "application/json"
+      default_status: 200
+    examples:
+      - code: "(api-post \"/users\" () (create-user *body*))"
+      - code: "(api-post \"/users/:id/activate\" () (activate-user id))"
+
+  api-put:
+    type: macro
+    purpose: "Define a PUT route for updates"
+    signature: "(api-put uri (&rest lambda-list) &body body)"
+    parameters:
+      uri: {required: true, type: string}
+      lambda-list: {required: true, type: list}
+      body: {required: true, type: forms}
+    behavior:
+      - "Parses JSON request body to *body*"
+      - "Extracts path parameters"
+      - "JSON-serializes response"
+    special_variables:
+      "*body*": {type: hash-table, description: "Parsed JSON request"}
+
+  api-patch:
+    type: macro
+    purpose: "Define a PATCH route for partial updates"
+    signature: "(api-patch uri (&rest lambda-list) &body body)"
+    parameters:
+      uri: {required: true, type: string}
+      lambda-list: {required: true, type: list}
+      body: {required: true, type: forms}
+    behavior:
+      - "Parses JSON request body to *body*"
+      - "Extracts path parameters"
+      - "JSON-serializes response"
+
+  api-delete:
+    type: macro
+    purpose: "Define a DELETE route"
+    signature: "(api-delete uri (&rest lambda-list) &body body)"
+    parameters:
+      uri: {required: true, type: string}
+      lambda-list: {required: true, type: list}
+      body: {required: true, type: forms}
+    behavior:
+      - "Extracts path parameters"
+      - "JSON-serializes response"
+      - "Common to return (no-content)"
+
+  start:
+    type: function
+    purpose: "Start the API server"
+    signature: "(start &key (port 8000) (address \"0.0.0.0\"))"
+    parameters:
+      port:
+        required: false
+        type: integer
+        default: 8000
+        description: "Server port"
+      address:
+        required: false
+        type: string
+        default: "\"0.0.0.0\""
+        description: "Bind address"
+    behavior:
+      - "Stops existing server if running"
+      - "Creates Hunchentoot easy-acceptor"
+      - "Installs Snooze dispatcher with custom resource name function"
+      - "Starts acceptor"
+      - "Sets *server* to acceptor instance"
+    side_effects:
+      - "Sets *server*"
+      - "Binds port on system"
+      - "Prints startup message"
+    returns: "Hunchentoot acceptor instance"
+
+  stop:
+    type: function
+    purpose: "Stop the API server"
+    signature: "(stop)"
+    behavior:
+      - "Stops *server* if running"
+      - "Sets *server* to nil"
+      - "Prints shutdown message"
+
+  validate:
+    type: macro
+    purpose: "Validate data with multiple checks, signal 422 on failure"
+    signature: "(validate data &body checks)"
+    parameters:
+      data:
+        required: true
+        type: hash-table
+        description: "Data to validate (typically *body*)"
+      checks:
+        required: true
+        type: forms
+        description: "Validation check function calls"
+    behavior:
+      - "Binds *validation-errors* to empty list"
+      - "Executes each check, collecting errors"
+      - "If errors exist, signals HTTP 422 condition"
+      - "Returns normally if validation passes"
+    error_format:
+      status: 422
+      body:
+        error: "validation_error"
+        message: "Validation failed"
+        details: "Array of error objects with field and message"
+    examples:
+      - code: |
+          (validate *body*
+            (require-fields "name" "email")
+            (require-type "age" 'number))
+
+  require-fields:
+    type: function
+    purpose: "Validate required fields are present and non-empty"
+    signature: "(require-fields data &rest fields)"
+    parameters:
+      data: {type: hash-table}
+      fields: {type: "string*", description: "Field names to check"}
+    behavior:
+      - "Checks each field exists in hash table"
+      - "Treats nil and empty string as missing"
+      - "Adds validation error for each missing field"
+    error_message: "\"required\""
+
+  require-type:
+    type: function
+    purpose: "Validate field type"
+    signature: "(require-type data field expected-type)"
+    parameters:
+      data: {type: hash-table}
+      field: {type: string}
+      expected-type:
+        type: symbol
+        allowed: [string, number, integer, boolean, list, hash-table]
+    behavior:
+      - "Skips if field not present"
+      - "Checks type matches expected"
+      - "Adds error if type mismatch"
+    error_message: "\"must be <type>\""
+
+  require-length:
+    type: function
+    purpose: "Validate string/list/vector length"
+    signature: "(require-length data field &key min max)"
+    parameters:
+      data: {type: hash-table}
+      field: {type: string}
+      min: {type: integer, required: false}
+      max: {type: integer, required: false}
+    behavior:
+      - "Works with strings, lists, vectors"
+      - "Checks length against min/max bounds"
+    error_message: "\"must be at least N characters\" or \"must be at most N characters\""
+
+  require-range:
+    type: function
+    purpose: "Validate numeric range"
+    signature: "(require-range data field &key min max)"
+    parameters:
+      data: {type: hash-table}
+      field: {type: string}
+      min: {type: number, required: false}
+      max: {type: number, required: false}
+    behavior:
+      - "Only validates if value is a number"
+      - "Checks value against min/max bounds"
+
+  require-pattern:
+    type: function
+    purpose: "Validate string against regex pattern"
+    signature: "(require-pattern data field pattern)"
+    parameters:
+      data: {type: hash-table}
+      field: {type: string}
+      pattern: {type: string, description: "Regular expression"}
+    behavior:
+      - "Uses cl-ppcre:scan to match"
+      - "Adds error if no match"
+    error_message: "\"invalid format\""
+
+  json-response:
+    type: function
+    purpose: "Create a JSON response"
+    signature: "(json-response data &key (status 200))"
+    parameters:
+      data: {type: t, description: "Data to serialize"}
+      status: {type: integer, default: 200}
+    returns: "Snooze response list (status headers body)"
+
+  ok:
+    type: function
+    signature: "(ok data)"
+    returns: "200 OK response with JSON data"
+
+  created:
+    type: function
+    signature: "(created data)"
+    returns: "201 Created response with JSON data"
+
+  no-content:
+    type: function
+    signature: "(no-content)"
+    returns: "204 No Content response with empty body"
+
+  not-found:
+    type: function
+    signature: "(not-found &optional (message \"Resource not found\"))"
+    behavior: "Signals HTTP 404 condition"
+    error_format:
+      error: "not_found"
+      message: "<provided message>"
+
+  bad-request:
+    type: function
+    signature: "(bad-request message &optional details)"
+    behavior: "Signals HTTP 400 condition"
+    error_format:
+      error: "bad_request"
+      message: "<provided message>"
+      details: "<optional details>"
+
+  error-response:
+    type: function
+    signature: "(error-response status message &optional details)"
+    purpose: "Generic error response for custom status codes"
+    parameters:
+      status: {type: integer, description: "HTTP status code"}
+      message: {type: string}
+      details: {type: t, required: false}
+
+  with-db:
+    type: macro
+    purpose: "Execute body with database connection"
+    signature: "(with-db (path) &body body)"
+    parameters:
+      path:
+        type: string
+        description: "Database file path or \":memory:\""
+    behavior:
+      - "Opens database connection"
+      - "Binds *db* to connection"
+      - "Executes body"
+      - "Closes connection on exit"
+    special_variables:
+      "*db*": "Database connection handle"
+
+  ensure-table:
+    type: function
+    purpose: "Create table if it doesn't exist"
+    signature: "(ensure-table name columns)"
+    parameters:
+      name: {type: "keyword or string", description: "Table name"}
+      columns:
+        type: list
+        description: "Column definitions"
+        format: "((name type &rest constraints)...)"
+        example: "((id integer :primary-key :autoincrement) (title text :not-null))"
+    behavior:
+      - "Calls sqlite:create-table with :if-not-exists t"
+      - "Must be called within with-db"
+
+  last-insert-id:
+    type: function
+    purpose: "Get rowid of last inserted row"
+    signature: "(last-insert-id)"
+    returns: "Integer rowid"
+    context: "Must be called within with-db"
+
+  row-to-hash:
+    type: function
+    purpose: "Convert database row to hash table"
+    signature: "(row-to-hash row column-names)"
+    parameters:
+      row: {type: list, description: "Database row as list"}
+      column-names: {type: list, description: "Column name symbols/strings"}
+    returns: "Hash table with string keys"
+    behavior:
+      - "Maps column names to values"
+      - "Converts symbol keys to lowercase strings"
+
+  rows-to-json:
+    type: function
+    purpose: "Convert multiple rows to list of hash tables"
+    signature: "(rows-to-json rows &optional column-names)"
+    returns: "List of hash tables suitable for JSON serialization"
+
+  with-transaction:
+    type: macro
+    purpose: "Execute body within database transaction"
+    signature: "(with-transaction &body body)"
+    behavior:
+      - "Begins transaction"
+      - "Commits on success"
+      - "Rolls back on error"
+    context: "Must be within with-db block"
+
+routing_internals:
+  parse-uri-pattern:
+    type: function
+    purpose: "Parse URI pattern into segment descriptors"
+    signature: "(parse-uri-pattern uri)"
+    parameters:
+      uri: {type: string, example: "\"/todos/:id\""}
+    returns: "List of (:literal . string) or (:param . symbol) pairs"
+    behavior:
+      - "Splits URI on /"
+      - "Identifies :param segments by leading colon"
+      - "Interns param symbols in :quickapi package"
+    example_output: "((:literal . \"todos\") (:param . ID))"
+
+  register-route:
+    type: function
+    purpose: "Register route pattern in registry"
+    signature: "(register-route uri-pattern resource-name method)"
+    side_effects: "Updates *route-registry* hash table"
+
+  match-uri-to-route:
+    type: function
+    purpose: "Match incoming URI to registered route"
+    signature: "(match-uri-to-route uri method)"
+    returns: "(values resource-name extracted-args) or NIL"
+    behavior:
+      - "Parses incoming URI"
+      - "Tries to match against registered routes"
+      - "Extracts path parameter values"
+      - "Returns resource name and alist of (param . value) pairs"
+
+confidence_scores:
+  # Based on code completeness, test coverage, documentation alignment
+  defapi: 0.95
+  api-get: 0.95
+  api-post: 0.95
+  api-put: 0.93
+  api-patch: 0.93
+  api-delete: 0.93
+  start: 0.95
+  stop: 0.95
+  validate: 0.97
+  require-fields: 0.97
+  require-type: 0.97
+  require-length: 0.95
+  require-range: 0.95
+  require-pattern: 0.95
+  json-response: 0.95
+  ok: 0.95
+  created: 0.95
+  no-content: 0.95
+  not-found: 0.95
+  bad-request: 0.95
+  error-response: 0.93
+  with-db: 0.95
+  ensure-table: 0.93
+  last-insert-id: 0.95
+  row-to-hash: 0.90
+  rows-to-json: 0.90
+  with-transaction: 0.93
+  parse-uri-pattern: 0.90
+  register-route: 0.88
+  match-uri-to-route: 0.88

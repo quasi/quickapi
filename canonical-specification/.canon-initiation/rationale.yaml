@@ -1,0 +1,326 @@
+---
+# Pass 5: Rationale Recovery
+# Recovers design decisions from git history, comments, commit messages
+
+pass: 5
+name: rationale_recovery
+completed_at: "2026-01-24"
+
+git_history_analysis:
+  commits_analyzed: 3
+  date_range: "2026-01 (very recent project)"
+
+  commits:
+    - hash: 6e9351a
+      date: "2026-01 (recent)"
+      message: "Implement route registry and URI pattern matching"
+      changes:
+        - "Add route registry hash table"
+        - "Implement parse-uri-pattern for URI templates"
+        - "Add route-entry struct"
+        - "Implement register-route and match-uri-to-route"
+        - "Update defapi macro for optional :name parameter"
+        - "Update validation logic and test suite"
+        - "Update examples and documentation"
+      rationale_extracted:
+        - decision: "Use route registry for pattern matching"
+          why: "Enable flexible URI patterns with path parameters"
+          impact: "Allows :id style parameters like FastAPI/Flask"
+          confidence: 0.90
+
+        - decision: "Store route patterns with method and resource name"
+          why: "Support method-specific routing"
+          impact: "Same URI can have different handlers per method"
+          confidence: 0.88
+
+        - decision: "Parse URI patterns into segment descriptors"
+          why: "Efficient matching without runtime regex compilation"
+          impact: "Fast route matching, clear parameter extraction"
+          confidence: 0.88
+
+        - decision: "Intern parameter symbols in :quickapi package"
+          why: "Consistent symbol identity across route definitions"
+          impact: "Predictable parameter binding"
+          confidence: 0.85
+
+    - hash: 8787d04
+      date: "2026-01"
+      message: "Add comprehensive GitHub README for quickapi"
+      body: "Includes project description, value proposition, 5-minute quickstart, common usage patterns, complete example reference, troubleshooting, and links to detailed documentation."
+      rationale_extracted:
+        - decision: "Position as 'like FastAPI but simpler'"
+          why: "Clear mental model for potential users"
+          impact: "Sets expectations about feature scope"
+          confidence: 0.92
+
+        - decision: "Emphasize 5-minute quickstart"
+          why: "Lower barrier to entry"
+          impact: "Attracts developers looking for rapid development"
+          confidence: 0.90
+
+        - decision: "Provide complete working example (todo-api)"
+          why: "Learning by example is effective"
+          impact: "Users can start from working code"
+          confidence: 0.92
+
+    - hash: 2175898
+      message: "- first cut"
+      rationale_extracted:
+        - decision: "Initial project setup"
+          notes: "Very first commit, establishes core structure"
+
+rationale_from_comments:
+  aboutme_comments:
+    - file: quickapi.asd
+      comment: "System definition for quickapi - curated JSON API stack for Common Lisp"
+      rationale: "Project is a 'curated stack', not a framework - intentional positioning"
+      confidence: 0.93
+
+    - file: quickapi.asd
+      long_description: "It's not a framework - it's a carefully curated combination of proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent documentation."
+      rationale:
+        - decision: "Not a framework, but curated libraries"
+          why: "Avoid framework complexity and lock-in"
+          impact: "Users can understand and replace components"
+          confidence: 0.95
+
+        - decision: "Emphasize 'thin glue code'"
+          why: "Minimal abstraction over proven libraries"
+          impact: "Easy to debug, less magic"
+          confidence: 0.93
+
+        - decision: "Choose Snooze (~850 LoC)"
+          why: "Lightweight, CLOS-based routing"
+          impact: "Minimal dependency footprint"
+          confidence: 0.90
+          note: "Explicitly documented as ~850 LoC - size matters"
+
+        - decision: "Use com.inuoe.jzon instead of other JSON libraries"
+          why: "Modern, maintained JSON library"
+          impact: "Better performance and correctness"
+          confidence: 0.85
+
+    - file: core.lisp
+      comment: "ABOUTME: Core route macros for quickapi - thin DSL layer over Snooze"
+      rationale:
+        - decision: "Route macros are 'thin DSL layer'"
+          why: "Minimal abstraction, easy to understand"
+          impact: "Users can see through to Snooze if needed"
+          confidence: 0.93
+
+    - file: validation.lisp
+      comment: "ABOUTME: Validation functions for quickapi - simple validation without DSL"
+      rationale:
+        - decision: "Simple validation without DSL"
+          why: "Avoid complex validation DSL like JSON Schema"
+          impact: "Straightforward, functional validation checks"
+          confidence: 0.92
+
+    - file: sqlite.lisp
+      comment: "ABOUTME: SQLite conveniences for quickapi - thin wrapper over cl-sqlite"
+      rationale:
+        - decision: "Thin wrapper over cl-sqlite"
+          why: "Consistent with philosophy - minimal abstraction"
+          impact: "Users can drop to cl-sqlite if needed"
+          confidence: 0.93
+
+    - file: response.lisp
+      comment: "ABOUTME: Response helpers for quickapi - semantic core for HTTP responses"
+      rationale:
+        - decision: "Semantic response helpers"
+          why: "ok, created, not-found more readable than status codes"
+          impact: "Self-documenting API code"
+          confidence: 0.93
+
+  inline_documentation:
+    - location: "core.lisp:api-get docstring"
+      text: "Path parameters (e.g., :id in /users/:id) are auto-extracted and bound as variables in BODY"
+      rationale:
+        - decision: "Automatic path parameter extraction"
+          why: "Reduce boilerplate - common pattern from web frameworks"
+          impact: "Less manual parameter handling"
+          confidence: 0.93
+
+    - location: "core.lisp:define-json-route"
+      text: "The LAMBDA-LIST is deprecated - path params are auto-extracted. If both are provided, LAMBDA-LIST is ignored to prevent duplicates."
+      rationale:
+        - decision: "Deprecate manual lambda-list"
+          why: "Automatic extraction is better UX"
+          impact: "Breaking change from earlier version"
+          confidence: 0.88
+          evolution: "API evolved from manual to automatic parameters"
+
+    - location: "validation.lisp:validate docstring"
+      text: "If any errors are found, signals a validation-error condition which is handled by returning 422"
+      rationale:
+        - decision: "Use 422 Unprocessable Entity for validation errors"
+          why: "Semantic HTTP status - distinct from 400 Bad Request"
+          impact: "Clients can distinguish validation vs malformed requests"
+          confidence: 0.92
+
+    - location: "response.lisp:error-response docstring"
+      text: "Use this for custom error status codes (401, 403, 409, 500, etc.)"
+      rationale:
+        - decision: "Provide generic error-response alongside specific helpers"
+          why: "Cover common cases with helpers, allow custom statuses"
+          impact: "Balance convenience and flexibility"
+          confidence: 0.90
+
+design_decisions_inferred:
+  architecture:
+    - decision: "Layer architecture: package → response → validation → core → sqlite"
+      why: "Clear dependency graph, no circular dependencies"
+      evidence: "ASDF :serial t loading order"
+      confidence: 0.95
+
+    - decision: "No middleware system"
+      why: "Keep it simple - explicitly stated in README 'No middleware'"
+      rationale: "Avoid framework complexity"
+      confidence: 0.95
+
+    - decision: "No configuration files"
+      why: "Explicitly stated in README - reduce infrastructure"
+      rationale: "Everything in code, no YAML/JSON config"
+      confidence: 0.95
+
+    - decision: "Special variables for request context (*request*, *body*, *db*)"
+      why: "Common Lisp idiom for dynamic scoping"
+      impact: "Easy access without threading through function calls"
+      confidence: 0.93
+
+    - decision: "Hash tables for JSON objects, not custom classes"
+      why: "Simple, flexible, no schema enforcement"
+      impact: "Quick prototyping, dynamic data"
+      confidence: 0.90
+
+  api_design:
+    - decision: "Five route macros, one per HTTP method"
+      why: "Clear, explicit, no ambiguity"
+      evidence: "README: '5 HTTP route macros'"
+      confidence: 0.95
+
+    - decision: "Automatic JSON serialization"
+      why: "Reduce boilerplate - common need for JSON APIs"
+      impact: "No manual stringify calls"
+      confidence: 0.95
+
+    - decision: "Automatic body parsing for POST/PUT/PATCH"
+      why: "Expected behavior - these methods have bodies"
+      impact: "Consistent with HTTP semantics"
+      confidence: 0.93
+
+    - decision: "Validation errors return 422 with all errors"
+      why: "Better UX - one round trip to see all validation issues"
+      impact: "Collect errors, not fail-fast"
+      confidence: 0.95
+
+    - decision: "Error responses signal conditions, not return"
+      why: "Allow early return from nested code"
+      impact: "Cleaner error handling, no need to thread errors up"
+      confidence: 0.93
+
+  naming:
+    - decision: "Prefix route macros with 'api-'"
+      why: "Namespace separation, clear intent"
+      impact: "Avoid conflicts with generic 'get', 'post' names"
+      confidence: 0.90
+
+    - decision: "Use 'defapi' instead of 'define-api'"
+      why: "Consistent with Common Lisp conventions (defun, defclass, etc.)"
+      impact: "Feels native to Lisp"
+      confidence: 0.92
+
+    - decision: "Response helpers use simple names (ok, created, not-found)"
+      why: "Readable, self-documenting"
+      impact: "Code reads like English"
+      confidence: 0.93
+
+  testing:
+    - decision: "Use FiveAM test framework"
+      why: "Popular, well-maintained Common Lisp test framework"
+      evidence: "tests/package.lisp imports 5am"
+      confidence: 0.90
+
+    - decision: "Separate test files per module"
+      why: "Clear organization, easy to find tests"
+      evidence: "response-tests, validation-tests, sqlite-tests, integration-tests"
+      confidence: 0.93
+
+    - decision: "Comprehensive validation tests (20+ tests)"
+      why: "Validation is core feature - must be robust"
+      evidence: "validation-tests.lisp has extensive coverage"
+      confidence: 0.95
+
+evolution_patterns:
+  - change: "Manual lambda-list → automatic path parameter extraction"
+    commit: "6e9351a"
+    rationale: "Improve developer experience, reduce boilerplate"
+    impact: "Simpler route definitions"
+    confidence: 0.88
+
+  - change: "Added route registry infrastructure"
+    commit: "6e9351a"
+    rationale: "Support flexible URI patterns"
+    impact: "Enables FastAPI-style path parameters"
+    confidence: 0.90
+
+non_goals_identified:
+  from_readme:
+    - "No middleware system"
+    - "No configuration files"
+    - "No heavy dependencies"
+    - "Not for large-scale enterprise applications"
+    - "Not supporting non-JSON content types"
+
+  inferred:
+    - "No authentication/authorization built-in"
+      evidence: "Not mentioned in features, no auth exports"
+      confidence: 0.85
+
+    - "No async/promise model"
+      evidence: "Synchronous handlers, standard Common Lisp"
+      confidence: 0.85
+
+    - "No ORM"
+      evidence: "Direct SQLite operations, not abstracted"
+      confidence: 0.90
+
+    - "No template rendering"
+      evidence: "JSON only, no HTML"
+      confidence: 0.95
+
+philosophy_extracted:
+  principles:
+    - "Thin veneer over proven libraries"
+      confidence: 0.97
+      evidence: "Repeated in ABOUTME comments and README"
+
+    - "5 macros, not 50 abstractions"
+      confidence: 0.95
+      evidence: "README tagline emphasis"
+
+    - "Focus on business logic, not infrastructure"
+      confidence: 0.93
+      evidence: "README positioning"
+
+    - "Automatic everything (JSON, validation, errors)"
+      confidence: 0.95
+      evidence: "Feature list emphasis on 'automatic'"
+
+    - "Small-to-medium projects"
+      confidence: 0.93
+      evidence: "README explicitly states target audience"
+
+target_audience:
+  - "Common Lisp developers building REST APIs"
+  - "Teams wanting FastAPI-like simplicity in Lisp"
+  - "Projects needing SQLite-backed JSON endpoints"
+  - "Developers who value minimal dependencies"
+  - "Teams preferring code over configuration"
+
+confidence_notes:
+  - "Very recent project (2026-01), limited git history"
+  - "Strong documentation and ABOUTME comments provide clear rationale"
+  - "Design philosophy consistently stated across multiple files"
+  - "Evolution visible in deprecation notes (lambda-list)"
+  - "Non-goals clearly stated in README"

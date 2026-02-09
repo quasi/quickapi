@@ -1,0 +1,116 @@
+---
+# Context Bundle: Request Context Feature
+# Auto-generated for canon-genesis and sub-agent workflows
+
+feature:
+  name: request_context
+  status: stable
+  confidence: 0.93
+  category: core
+
+summary: |
+  Request context provides special variables and extracted data available during
+  request handling. Includes *request* (Snooze request object), *body* (parsed JSON),
+  *db* (database connection in with-db), and automatically bound path parameters.
+
+key_concepts:
+  - "Special Variables: *request*, *body*, *db*"
+  - "*request*: Snooze request object (headers, method, URI)"
+  - "*body*: Parsed JSON request body (hash table)"
+  - "*db*: Database connection (within with-db)"
+  - "Path Parameters: Automatically bound as lexical variables"
+
+primary_contracts:
+  - "*request*: Special variable bound to Snooze request object"
+  - "*body*: Special variable bound to parsed JSON (POST/PUT/PATCH)"
+  - "*db*: Special variable bound to database connection (with-db)"
+  - "Path parameters: Automatically extracted and bound as variables"
+
+core_properties:
+  - "*request* available in all route handlers"
+  - "*body* only bound for POST/PUT/PATCH with JSON content-type"
+  - "*db* only bound within with-db form"
+  - "Path parameters bound as lexical variables (not special)"
+  - "Parameter symbols interned in :quickapi package"
+
+dependencies:
+  - snooze: "Request object"
+  - routing: "Path parameter extraction"
+  - json_serialization: "*body* parsing"
+  - sqlite_integration: "*db* binding"
+
+implementation_files:
+  - src/core.lisp:174-209: "Special variable bindings in define-json-route"
+  - src/core.lisp:49-58: "Path parameter extraction (parse-uri-pattern)"
+  - src/sqlite.lisp:17-30: "*db* binding in with-db"
+
+test_files:
+  - tests/integration-tests.lisp: "Tests using *request* and *body*"
+  - tests/sqlite-tests.lisp: "Tests using *db*"
+
+example_usage: |
+  ;; Access request object
+  (api-get "/debug" ()
+    (let ((method (snooze:http-method *request*))
+          (uri (snooze:request-uri *request*)))
+      (ok (make-hash-table :test 'equal)
+          :method method
+          :uri uri)))
+
+  ;; Access parsed body
+  (api-post "/users" ()
+    (let ((name (gethash "name" *body*))
+          (email (gethash "email" *body*)))
+      (ok (create-user name email))))
+
+  ;; Path parameters auto-bound
+  (api-get "/users/:id" ()
+    ;; 'id' is automatically bound
+    (ok (find-user-by-id id)))
+
+  ;; Database connection
+  (api-get "/todos" ()
+    (with-db (db "todos.db")
+      ;; *db* is now bound
+      (ok (query-all *db* "SELECT * FROM todos"))))
+
+common_patterns:
+  - "Access body field: (gethash \"field\" *body*)"
+  - "Use path param: (api-get \"/resource/:id\" () (process id))"
+  - "Check request method: (snooze:http-method *request*)"
+  - "Database query: (with-db (db path) (query *db* sql))"
+
+special_variable_scoping:
+  - "*request*: Dynamically bound during request handling"
+  - "*body*: Dynamically bound for POST/PUT/PATCH"
+  - "*db*: Dynamically bound within with-db lexical scope"
+  - "Path params: Lexically bound in handler body"
+
+snooze_request_object:
+  methods:
+    - "snooze:http-method: GET, POST, PUT, PATCH, DELETE"
+    - "snooze:request-uri: Full request URI"
+    - "snooze:http-headers: Request headers"
+    - "snooze:payload: Raw request body"
+
+known_issues:
+  - "No helper functions for common request operations (headers, query params)"
+  - "path-param/query-param/header exports removed (were unimplemented)"
+
+design_decisions:
+  - "Special variables for global request state (idiomatic Common Lisp)"
+  - "Automatic path parameter binding reduces boilerplate"
+  - "Parameter symbols interned in :quickapi to avoid package pollution"
+
+related_features:
+  - routing: "Provides path parameter extraction"
+  - json_serialization: "Provides *body* parsing"
+  - validation: "Validates *body* data"
+  - sqlite_integration: "Provides *db* binding"
+
+vocabulary_references:
+  - Request: "HTTP request object"
+  - Request Context: "Special variables and extracted data"
+  - Request Body: "Parsed JSON payload (*body*)"
+  - Path Parameter: "URI variable auto-bound in handler"
+  - Special Variable: "Dynamically scoped variable (*request*, *body*, *db*)"

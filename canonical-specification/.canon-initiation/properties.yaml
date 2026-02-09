@@ -1,0 +1,358 @@
+---
+# Pass 4: Property Inference
+# Infers invariants from CODE, assertions, validators, constraints
+
+pass: 4
+name: property_inference
+completed_at: "2026-01-24"
+
+properties:
+  routing:
+    - property: "Each route must have unique (method, uri-pattern) combination"
+      type: uniqueness
+      enforcement: hash-table-key
+      location: "core.lisp:register-route"
+      confidence: 0.95
+      code: "(setf (gethash key *route-registry*) entry)"
+      notes: "key is (cons method uri-pattern)"
+
+    - property: "URI patterns consist of literal segments and parameter segments"
+      type: structural
+      enforcement: parsing
+      location: "core.lisp:parse-uri-pattern"
+      confidence: 0.93
+      code: "Returns (:literal . string) or (:param . symbol)"
+
+    - property: "Parameter names are extracted from segments prefixed with ':'"
+      type: parsing
+      enforcement: parse-uri-pattern
+      location: "core.lisp:parse-uri-pattern"
+      confidence: 0.95
+      code: "(char= (char part 0) #\\:)"
+
+    - property: "Parameter symbols are interned in :quickapi package"
+      type: namespacing
+      enforcement: parse-uri-pattern
+      location: "core.lisp:parse-uri-pattern"
+      confidence: 0.93
+      code: "(intern (string-upcase (subseq part 1)) :quickapi)"
+
+    - property: "URI matching requires same number of segments"
+      type: structural
+      enforcement: match-uri-to-route
+      location: "core.lisp:match-uri-to-route"
+      confidence: 0.93
+      code: "(= (length uri-segments) (length pattern-segments))"
+
+    - property: "Literal segments must match exactly (case-insensitive)"
+      type: matching
+      enforcement: match-uri-to-route
+      location: "core.lisp:match-uri-to-route"
+      confidence: 0.93
+      code: "(string-equal uri-seg (cdr pat-seg))"
+
+    - property: "Route registry is global and persistent across requests"
+      type: state
+      enforcement: defvar
+      location: "core.lisp:*route-registry*"
+      confidence: 0.95
+
+  json_serialization:
+    - property: "All responses are JSON-serialized unless already a response list"
+      type: serialization
+      enforcement: define-json-route
+      location: "core.lisp:define-json-route"
+      confidence: 0.92
+      code: "Automatic typecase in route macro"
+
+    - property: "Response content-type is always application/json"
+      type: http
+      enforcement: define-json-route
+      location: "core.lisp:define-json-route"
+      confidence: 0.95
+      code: "Returns ... \"application/json\""
+
+    - property: "Request body is parsed only for POST/PUT/PATCH methods"
+      type: http
+      enforcement: define-json-route
+      location: "core.lisp:define-json-route"
+      confidence: 0.95
+      code: "(member method '(:post :put :patch))"
+
+    - property: "*body* is nil for GET/DELETE requests"
+      type: request-context
+      enforcement: define-json-route
+      location: "core.lisp:define-json-route"
+      confidence: 0.93
+      derivation: "Not bound for methods without body"
+
+  validation:
+    - property: "Validation errors are collected, not fail-fast"
+      type: behavior
+      enforcement: validate-macro
+      location: "validation.lisp:validate"
+      confidence: 0.97
+      code: "(push error *validation-errors*)"
+      evidence: "All checks execute, then errors are checked"
+
+    - property: "Validation signals HTTP 422 with all collected errors"
+      type: error-handling
+      enforcement: signal-validation-error
+      location: "validation.lisp:signal-validation-error"
+      confidence: 0.97
+      code: "(snooze:http-condition 422 ...)"
+
+    - property: "Validation error format is standardized"
+      type: data-format
+      enforcement: signal-validation-error
+      location: "validation.lisp:signal-validation-error"
+      confidence: 0.95
+      format:
+        error: "validation_error"
+        message: "Validation failed"
+        details: "Array of {field, message}"
+
+    - property: "Empty string is treated as missing for required fields"
+      type: validation-logic
+      enforcement: require-fields
+      location: "validation.lisp:require-fields"
+      confidence: 0.97
+      code: "(and (stringp value) (string= value \"\"))"
+      test: require-fields-empty-string
+
+    - property: "Type validation skips nil values"
+      type: validation-logic
+      enforcement: require-type
+      location: "validation.lisp:require-type"
+      confidence: 0.93
+      code: "(when value ...)"
+      rationale: "Allow optional fields to be nil"
+
+    - property: "Length validation skips nil values"
+      type: validation-logic
+      enforcement: require-length
+      location: "validation.lisp:require-length"
+      confidence: 0.93
+      code: "(when value ...)"
+
+    - property: "Range validation only applies to numbers"
+      type: validation-logic
+      enforcement: require-range
+      location: "validation.lisp:require-range"
+      confidence: 0.93
+      code: "(when (and value (numberp value)) ...)"
+
+    - property: "Pattern validation only applies to strings"
+      type: validation-logic
+      enforcement: require-pattern
+      location: "validation.lisp:require-pattern"
+      confidence: 0.93
+      code: "(when (and value (stringp value)) ...)"
+
+  error_handling:
+    - property: "All error responses have standardized format"
+      type: data-format
+      enforcement: format-error
+      location: "response.lisp:format-error"
+      confidence: 0.95
+      format:
+        error: "error_type"
+        message: "Human-readable message"
+        details: "Optional additional data"
+
+    - property: "Error type is derived from HTTP status code"
+      type: error-format
+      enforcement: status-to-error-type
+      location: "response.lisp:status-to-error-type"
+      confidence: 0.93
+      examples:
+        400: "bad_request"
+        404: "not_found"
+        422: "validation_error"
+
+    - property: "Error responses signal conditions, not return values"
+      type: control-flow
+      enforcement: snooze:http-condition
+      location: "response.lisp (bad-request, not-found, error-response)"
+      confidence: 0.95
+      code: "(snooze:http-condition status ...)"
+      rationale: "Allows early return from nested code"
+
+  response:
+    - property: "Success responses return data directly or via helpers"
+      type: api-design
+      enforcement: define-json-route
+      location: "core.lisp:define-json-route"
+      confidence: 0.92
+      notes: "Route body can return data or call ok/created/no-content"
+
+    - property: "Response helpers return Snooze response format"
+      type: data-format
+      enforcement: json-response
+      location: "response.lisp:json-response"
+      confidence: 0.95
+      format: "(status headers body)"
+
+    - property: "204 No Content has empty body"
+      type: http-compliance
+      enforcement: no-content
+      location: "response.lisp:no-content"
+      confidence: 0.97
+      code: "(list 204 '() '())"
+
+  database:
+    - property: "*db* must be bound for database operations"
+      type: precondition
+      enforcement: with-db
+      location: "sqlite.lisp:with-db"
+      confidence: 0.95
+      notes: "All db operations expect *db* to be bound"
+
+    - property: "Database connection is automatically closed"
+      type: resource-management
+      enforcement: sqlite:with-open-database
+      location: "sqlite.lisp:with-db"
+      confidence: 0.95
+      code: "Uses sqlite:with-open-database"
+
+    - property: "ensure-table is idempotent"
+      type: idempotence
+      enforcement: :if-not-exists
+      location: "sqlite.lisp:ensure-table"
+      confidence: 0.95
+      code: ":if-not-exists t"
+
+    - property: "Transactions commit on normal exit"
+      type: transaction
+      enforcement: sqlite:with-transaction
+      location: "sqlite.lisp:with-transaction"
+      confidence: 0.93
+
+    - property: "Transactions rollback on error"
+      type: transaction
+      enforcement: sqlite:with-transaction
+      location: "sqlite.lisp:with-transaction"
+      confidence: 0.93
+
+    - property: "row-to-hash converts symbol keys to lowercase strings"
+      type: data-format
+      enforcement: row-to-hash
+      location: "sqlite.lisp:row-to-hash"
+      confidence: 0.90
+      code: "(string-downcase (symbol-name key))"
+      rationale: "JSON keys are strings, not symbols"
+
+  server:
+    - property: "Only one server instance can run at a time"
+      type: singleton
+      enforcement: start
+      location: "core.lisp:start"
+      confidence: 0.95
+      code: "(when *server* (stop))"
+
+    - property: "*server* holds the running acceptor or nil"
+      type: state
+      enforcement: start/stop
+      location: "core.lisp:*server*"
+      confidence: 0.97
+
+    - property: "Server stops gracefully when stop is called"
+      type: resource-management
+      enforcement: stop
+      location: "core.lisp:stop"
+      confidence: 0.93
+      code: "(hunchentoot:stop *server*)"
+
+    - property: "Snooze dispatcher uses custom resource name function"
+      type: integration
+      enforcement: start
+      location: "core.lisp:start"
+      confidence: 0.90
+      code: "snooze:*resource-name-function* bound to quickapi-resource-name"
+
+  api_definition:
+    - property: "*api* holds current API instance"
+      type: state
+      enforcement: defapi
+      location: "core.lisp:defapi"
+      confidence: 0.95
+
+    - property: "API name defaults to symbol-name if not provided"
+      type: default-value
+      enforcement: defapi
+      location: "core.lisp:defapi"
+      confidence: 0.93
+      code: "(or name (string symbol-name))"
+
+    - property: "API version defaults to \"1.0\""
+      type: default-value
+      enforcement: defapi
+      location: "core.lisp:defapi"
+      confidence: 0.95
+
+invariants_from_dependencies:
+  snooze:
+    - "defroute must be called at top level (macro expansion time)"
+    - "http-condition signals a condition that Snooze catches"
+    - "Resource names must be unique"
+
+  hunchentoot:
+    - "Acceptor can only bind one port at a time"
+    - "Dispatch table is a list of dispatch functions"
+
+  jzon:
+    - "stringify accepts hash tables, alists, plists, lists, primitives"
+    - "parse returns hash tables for JSON objects"
+
+  cl-ppcre:
+    - "scan returns match position or nil"
+    - "split returns list of strings"
+
+  sqlite:
+    - "Database path \":memory:\" creates in-memory database"
+    - "with-transaction commits on normal exit, rolls back on error"
+    - "last-insert-rowid returns most recent autoincrement id"
+
+constraints_from_common_lisp:
+  - property: "Special variables use *name* convention"
+    enforcement: convention
+    confidence: 0.97
+    examples: [*api*, *server*, *request*, *body*, *db*, *route-registry*, *validation-errors*]
+
+  - property: "Exported symbols defined in package.lisp"
+    enforcement: defpackage
+    confidence: 0.97
+
+  - property: "Macros expand at compile time"
+    enforcement: language
+    confidence: 1.0
+    relevance: "defapi, api-*, validate, with-db, with-transaction"
+
+  - property: "Hash tables default to 'eql test, must specify :test 'equal for strings"
+    enforcement: language
+    confidence: 1.0
+    code: "(make-hash-table :test 'equal)"
+
+verification_status:
+  tested_properties:
+    - "Validation error collection (test: validate-macro-multiple-errors)"
+    - "Empty string treated as missing (test: require-fields-empty-string)"
+    - "Type validation (tests: require-type-*)"
+    - "Length validation (tests: require-length-*)"
+    - "Range validation (tests: require-range-*)"
+    - "Pattern validation (tests: require-pattern-*)"
+    - "Response helpers (tests: response-tests.lisp)"
+    - "Database helpers (tests: sqlite-tests.lisp)"
+
+  untested_properties:
+    - "URI matching with complex patterns"
+    - "Concurrent server requests"
+    - "Resource cleanup on server shutdown"
+    - "Error handling edge cases (malformed JSON, etc.)"
+    - "Parameter extraction with URL-encoded values"
+
+confidence_summary:
+  high_confidence: 42    # >= 0.9
+  medium_confidence: 8   # 0.7-0.9
+  low_confidence: 0      # < 0.5
+  total: 50

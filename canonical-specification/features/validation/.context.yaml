@@ -1,0 +1,121 @@
+---
+# Context Bundle: Validation Feature
+# Auto-generated for canon-genesis and sub-agent workflows
+
+feature:
+  name: validation
+  status: stable
+  confidence: 0.97
+  category: core
+
+summary: |
+  Validation framework provides a `validate` macro and five validator functions
+  for checking request data. Validators collect all errors before signaling a
+  standardized HTTP 422 response, providing better UX than fail-fast validation.
+
+key_concepts:
+  - "validate Macro: Declarative validation with error collection"
+  - "Non-Fail-Fast: All validators run, all errors collected"
+  - "HTTP 422: Unprocessable Entity for validation failures"
+  - "Error Format: Standardized {error, message, details} structure"
+  - "Five Validators: fields, type, length, range, pattern"
+
+primary_contracts:
+  - validate: "Run validators, collect errors, signal 422 if failures"
+  - require-fields: "Check required fields present and non-empty"
+  - require-type: "Check field type (string, number, integer, boolean, list, hash-table)"
+  - require-length: "Check string/list length (min/max)"
+  - require-range: "Check numeric value range (min/max)"
+  - require-pattern: "Check string matches regex pattern"
+  - validation-error: "Condition signaled on validation failure"
+
+core_properties:
+  - "Validation errors collected, not fail-fast"
+  - "Validation failures signal HTTP 422"
+  - "Empty strings treated as missing for require-fields"
+  - "nil values skip type/length/range checks (allows optional fields)"
+  - "Error format is standardized and predictable"
+
+dependencies:
+  - cl-ppcre: "Regex pattern matching"
+  - snooze: "HTTP condition signaling"
+  - request_context: "Validates *body* hash table"
+  - error_handling: "Standardized error responses"
+
+implementation_files:
+  - src/validation.lisp: "All validation logic"
+  - src/package.lisp: "Exported validators"
+
+test_files:
+  - tests/validation-tests.lisp: "20+ comprehensive tests"
+
+example_usage: |
+  ;; Validate POST body for user creation
+  (api-post "/users" ()
+    (validate
+      (require-fields *body* "name" "email")
+      (require-type *body* "age" 'integer)
+      (require-range *body* "age" :min 0 :max 120)
+      (require-pattern *body* "email" "@"))
+    (ok (create-user *body*)))
+
+  ;; Multiple validators, all errors collected
+  (validate
+    (require-fields data "title" "content")
+    (require-length data "title" :min 1 :max 100)
+    (require-length data "content" :min 10))
+
+common_patterns:
+  - "Basic validation: (validate (require-fields *body* \"field1\" \"field2\"))"
+  - "Type checking: (require-type *body* \"age\" 'integer)"
+  - "String length: (require-length *body* \"name\" :min 1 :max 100)"
+  - "Numeric range: (require-range *body* \"age\" :min 18)"
+  - "Email pattern: (require-pattern *body* \"email\" \"@\")"
+
+validation_semantics:
+  empty_string: "Treated as missing for require-fields"
+  nil_values: "Skipped for type/length/range checks (allows optional fields)"
+  type_checking: "Supports: string, number, integer, boolean, list, hash-table"
+  pattern_matching: "Uses cl-ppcre:scan for regex validation"
+
+error_response_format: |
+  HTTP 422 Unprocessable Entity
+  {
+    "error": "validation_error",
+    "message": "Validation failed",
+    "details": [
+      {"field": "name", "message": "required"},
+      {"field": "age", "message": "must be at least 0"}
+    ]
+  }
+
+validator_signatures:
+  require-fields: "(data &rest field-names)"
+  require-type: "(data field expected-type)"
+  require-length: "(data field &key min max)"
+  require-range: "(data field &key min max)"
+  require-pattern: "(data field pattern)"
+
+internal_implementation:
+  - "*validation-errors* special variable for error collection"
+  - "Each validator appends to *validation-errors* list"
+  - "validate macro checks *validation-errors* after running validators"
+  - "validation-error condition includes collected errors"
+
+known_issues: []
+
+design_decisions:
+  - "Non-fail-fast: Better UX, return all errors at once"
+  - "HTTP 422: Semantic correctness for validation failures (ADR-003)"
+  - "Simple validators, no DSL: Keep it straightforward"
+
+related_features:
+  - request_context: "Validates *body* from parsed JSON"
+  - error_handling: "Standardized 422 error format"
+  - json_serialization: "Validates parsed JSON data"
+
+vocabulary_references:
+  - Validation: "Process of checking request data constraints"
+  - Validator: "Function checking specific constraint"
+  - Validation Error: "Constraint violation with field + message"
+  - HTTP 422: "Unprocessable Entity status for validation failures"
