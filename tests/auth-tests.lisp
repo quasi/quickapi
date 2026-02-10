@@ -224,35 +224,27 @@
 ;;; ============================================================================
 
 (5am:test perform-auth-check-jwt-success
-  "Test perform-auth-check with valid JWT"
+  "Test perform-auth-check with valid JWT returns claims hash-table"
   (let ((qa:*jwt-secret* "test-secret-key-at-least-32-chars"))
     (let ((claims (make-hash-table :test 'equal)))
       (setf (gethash "sub" claims) "user123")
       (let* ((token (qa:generate-jwt claims))
              (env (list :http-authorization (format nil "Bearer ~a" token))))
-        (multiple-value-bind (success user error)
-            (qa::perform-auth-check :jwt env)
-          (5am:is (eq t success))
-          (5am:is (hash-table-p user))
-          (5am:is (null error)))))))
+        (let ((result (qa::perform-auth-check :jwt env)))
+          (5am:is (hash-table-p result))
+          (5am:is (string= "user123" (gethash "sub" result))))))))
 
 (5am:test perform-auth-check-jwt-failure
-  "Test perform-auth-check with invalid JWT"
+  "Test perform-auth-check signals authentication-error with invalid JWT"
   (let ((qa:*jwt-secret* "test-secret-key-at-least-32-chars")
         (env '(:http-authorization "Bearer invalid.token.here")))
-    (multiple-value-bind (success user error)
-        (qa::perform-auth-check :jwt env)
-      (5am:is (null success))
-      (5am:is (null user))
-      (5am:is (stringp error)))))
+    (5am:signals qa:authentication-error
+      (qa::perform-auth-check :jwt env))))
 
 (5am:test perform-auth-check-unknown-type
-  "Test perform-auth-check with unknown auth type"
-  (multiple-value-bind (success user error)
-      (qa::perform-auth-check :unknown '())
-    (5am:is (null success))
-    (5am:is (null user))
-    (5am:is (stringp error))))
+  "Test perform-auth-check signals bad-request-error for unknown auth type"
+  (5am:signals qa:bad-request-error
+    (qa::perform-auth-check :unknown '())))
 
 ;;; ============================================================================
 ;;; Route Auth Integration Tests
