@@ -201,6 +201,16 @@
          :message message
          :cause cause))
 
+(defun error-response (status message &optional details)
+  "Signal an HTTP error with a custom status code.
+   STATUS is the HTTP status code (e.g., 409).
+   MESSAGE is a human-readable description.
+   DETAILS is optional structured data."
+  (error 'http-error
+         :status status
+         :message message
+         :details details))
+
 ;;; =============================================================================
 ;;; Response Conversion
 ;;; =============================================================================
@@ -217,14 +227,22 @@
           '(:content-type "application/json; charset=utf-8")
           (list (com.inuoe.jzon:stringify body)))))
 
-(defun format-error-response (status message &optional details)
-  "Format an error response as a hash-table for JSON serialization."
+(defun format-error (error-type message &optional details)
+  "Format an error as a hash-table for JSON serialization.
+   ERROR-TYPE is a string like \"validation_error\" or \"not_found\".
+   MESSAGE is a human-readable description.
+   DETAILS is optional structured data (list, hash-table, etc.)."
   (let ((response (make-hash-table :test 'equal)))
-    (setf (gethash "error" response) (status-to-error-type status))
+    (setf (gethash "error" response) error-type)
     (setf (gethash "message" response) message)
     (when details
       (setf (gethash "details" response) details))
     response))
+
+(defun format-error-response (status message &optional details)
+  "Format an error response as a hash-table for JSON serialization.
+   Uses STATUS code to determine the error type string."
+  (format-error (status-to-error-type status) message details))
 
 (defun status-to-error-type (status)
   "Convert HTTP status code to an error type string."

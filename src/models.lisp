@@ -188,9 +188,10 @@
          (model-find-by ,table-name field value))
 
        ;; list-<model>s
-       (defun ,list-fn (&key limit offset order-by)
-         ,(format nil "List all ~a records with optional pagination." name)
-         (model-list ,table-name :limit limit :offset offset :order-by order-by))
+       (defun ,list-fn (&key limit offset order-by where)
+         ,(format nil "List all ~a records with optional pagination and filtering." name)
+         (model-list ,table-name :limit limit :offset offset
+                     :order-by order-by :where where))
 
        ;; update-<model>
        (defun ,update-fn (id data)
@@ -203,9 +204,13 @@
          (model-delete ,table-name id))
 
        ;; count-<model>s
-       (defun ,count-fn ()
-         ,(format nil "Count all ~a records." name)
-         (model-count ,table-name))
+       (defun ,count-fn (&key where)
+         ,(format nil "Count ~a records, optionally filtered." name)
+         (model-count ,table-name :where where))
+
+       ;; Auto-export generated CRUD functions
+       (export '(,create-fn ,find-fn ,find-by-fn ,list-fn
+                 ,update-fn ,delete-fn ,count-fn))
 
        ',name)))
 
@@ -324,37 +329,25 @@
 (defun model-find-by (table-name field value)
   "Find a record by FIELD=VALUE in TABLE-NAME.
    FIELD is converted from Lisp style (hyphens) to SQL style (underscores).
-   Offers restarts if record not found (same as model-find)."
+   Returns the record as a hash-table, or NIL if not found."
   (let* ((sql-field (lisp-to-sql-name field))
          (columns (get-column-names table-name))
          (rows (sqlite:execute-to-list *db*
                  (format nil "SELECT * FROM ~a WHERE ~a = ? LIMIT 1"
                          table-name sql-field)
                  value)))
-    (if rows
-        (row-to-hash (first rows) columns)
-        (restart-case
-            (error 'record-not-found
-                   :operation 'SELECT
-                   :table table-name
-                   :message (format nil "Record with ~a = ~a not found in table ~a" field value table-name))
-          (use-value (value)
-            :report "Provide a record (hash-table) to use instead"
-            :interactive (lambda () (list (make-hash-table :test 'equal)))
-            value)
-          (return-nil ()
-            :report "Return NIL instead of signaling an error"
-            nil)
-          (retry ()
-            :report "Retry the database lookup"
-            (model-find-by table-name field value))))))
+    (when rows
+      (row-to-hash (first rows) columns))))
 
-(defun model-list (table-name &key limit offset order-by)
-  "List records from TABLE-NAME with optional pagination."
+(defun model-list (table-name &key limit offset order-by where)
+  "List records from TABLE-NAME with optional pagination and filtering.
+   WHERE: s-expression for where clause e.g. '(:= :field value)
+   ORDER-BY: s-expression e.g. '(:created-at :desc) or list of such"
   (let* ((columns (get-column-names table-name))
-         (sql (format nil "SELECT * FROM ~a~@[ ORDER BY ~a~]~@[ LIMIT ~a~]~@[ OFFSET ~a~]"
-                      table-name order-by limit offset))
-         (rows (sqlite:execute-to-list *db* sql)))
+         (table-key (intern (string-upcase table-name) :keyword))
+         (rows (sqlite:select *db* table-key
+                 :where where :order-by order-by
+                 :limit limit :offset offset)))
     (mapcar (lambda (row) (row-to-hash row columns)) rows)))
 
 (defun model-update (table-name id data)
@@ -386,8 +379,13 @@
     id)
   t)
 
-(defun model-count (table-name)
-  "Count records in TABLE-NAME."
-  (let ((result (sqlite:execute-single *db*
-                  (format nil "SELECT COUNT(*) FROM ~a" table-name))))
-    result))
+(defun model-count (table-name &key where)
+  "Count records in TABLE-NAME, optionally filtered by WHERE clause.
+   WHERE: s-expression for where clause e.g. '(:= :field value)"
+  (multiple-value-bind (where-sql where-params)
+      (sqlite:compile-where where)
+    (let ((sql (if (string= where-sql "")
+                   (format nil "SELECT COUNT(*) FROM ~a" table-name)
+                   (format nil "SELECT COUNT(*) FROM ~a WHERE ~a"
+                           table-name where-sql))))
+      (apply #'sqlite:execute-single *db* sql where-params))))
