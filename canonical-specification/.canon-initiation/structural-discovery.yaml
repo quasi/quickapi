@@ -130,7 +130,7 @@ features_identified:
       code:
         - "sqlite.lisp: with-db macro, ensure-table, last-insert-id"
         - "Helpers: row-to-hash, rows-to-json, with-transaction"
-        - "Thin wrapper over cl-sqlite"
+        - "Thin wrapper over inquisitio"
       docs:
         - "Documents all database helpers"
         - "Tutorial shows complete database integration"

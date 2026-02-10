@@ -12,7 +12,7 @@ metadata:
   stability: stable
 
 summary: |
-  SQLite integration provides a thin wrapper over cl-sqlite with helpers
+  SQLite integration provides a thin wrapper over inquisitio with helpers
   optimized for JSON API development. The with-db macro manages connections,
   ensure-table provides declarative schema management, and conversion helpers
   (row-to-hash, rows-to-json) enable seamless integration with JSON responses.
@@ -20,7 +20,7 @@ summary: |
 purpose:
   user_benefit: "Use SQLite with minimal boilerplate and automatic JSON serialization"
   problem_solved: "Manual database connection management and row-to-JSON conversion"
-  alternatives: "Direct cl-sqlite usage (more verbose, manual conversion)"
+  alternatives: "Direct inquisitio usage (more verbose, manual conversion)"
 
 key_capabilities:
   - "with-db macro for automatic connection management"
@@ -62,11 +62,11 @@ dependencies:
   optional: []
 
 implementation_notes:
-  - "Thin wrapper - re-exports most cl-sqlite operations"
+  - "Thin wrapper - re-exports most inquisitio operations"
   - "Hash tables use :test 'equal for string keys"
   - "ensure-table uses CREATE TABLE IF NOT EXISTS"
   - "last-insert-id wraps sqlite:last-insert-rowid"
-  - "Transaction support via cl-sqlite:with-transaction"
+  - "Transaction support via inquisitio:with-transaction"
 
 testing_status:
   unit_tests: "Excellent (sqlite-tests.lisp)"

@@ -311,5 +311,5 @@ See `examples/todo-api.lisp` for the complete implementation.
 
 ## Next Steps
 
-- [Database Guide](03-database.md) - Learn more about cl-sqlite
+- [Database Guide](03-database.md) - Learn more about inquisitio
 - [Deployment](04-deployment.md) - Deploy to production

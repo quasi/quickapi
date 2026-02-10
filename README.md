@@ -1,8 +1,10 @@
-# quickapi
+# quickAPI
 
-Build JSON APIs in Common Lisp with zero boilerplate.
+Build JSON APIs in Common Lisp with zero boilerplate. Simple. Beginner friendly. Agent friendly.
 
-## Why quickapi?
+> This Library is designed by me and implemented by Claude with my inputs. This is designed for consumption by Agents.  If you have a problem with Agent written code then this library is not for you.
+
+## Why quickAPI?
 
 Most web frameworks overwhelm beginners with configuration, middleware chains, and architectural decisions. quickapi gives you three simple tools:
 
@@ -29,13 +31,14 @@ No XML config. No class hierarchies. No framework lock-in.
 ### Prerequisites
 
 - SBCL or another Common Lisp implementation
-- Quicklisp installed
+- Quicklisp and a bunch of libraries (Clack/Lack, cl-base64, ironclad, Jose, cl-ppcre, jzon)
 
 ### Install
 
 ```bash
-cd ~/quicklisp/local-projects
-git clone https://github.com/yourusername/quickapi.git
+cd ~/.quicklisp/local-projects
+git clone https://github.com/quasi/inquisitio.git
+git clone https://github.com/quasi/quickapi.git
 ```
 
 Load in your REPL:
@@ -405,13 +408,17 @@ Run it:
 
 ## Project status
 
-QuickAPI 2.0 is feature-complete and tested. All three phases implemented:
-- ✓ Phase 1: defmodel macro for database models
-- ✓ Phase 2: Clack/Lack middleware support
-- ✓ Phase 3: Authentication (JWT, sessions, API keys)
+QuickAPI:
+- ✓ defmodel macro for database models
+- ✓ Clack/Lack middleware support
+- ✓ Authentication (JWT, sessions, API keys)
 
-284 tests passing. Ready for building small-to-medium APIs.
+**284 tests passing**. Ready for building APIs.
 
 ## License
 
 MIT - see [LICENSE](LICENSE)
+
+## Author
+
+quasi / quasiLabs 2026

@@ -12,7 +12,7 @@ stack:
     - hunchentoot     # HTTP server
     - com.inuoe.jzon  # Modern JSON library
     - cl-ppcre        # Regex for validation
-    - sqlite          # cl-sqlite for database
+    - sqlite          # inquisitio for database
 
 passes:
   docs_survey:

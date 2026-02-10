@@ -36,7 +36,7 @@ core_properties:
   - "Transactions not explicitly managed (SQLite auto-commit)"
 
 dependencies:
-  - sqlite: "cl-sqlite library for database operations"
+  - sqlite: "inquisitio library for database operations"
   - request_context: "*db* special variable convention"
   - json_serialization: "Query results as hash tables (JSON-compatible)"
 

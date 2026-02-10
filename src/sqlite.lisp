@@ -1,4 +1,4 @@
-;;;; ABOUTME: SQLite conveniences for quickapi - thin wrapper over cl-sqlite
+;;;; ABOUTME: SQLite conveniences for quickapi - thin wrapper over inquisitio
 
 (in-package :quickapi)
 
@@ -15,7 +15,7 @@
      ,@body))
 
 ;;; Convenience Functions
-;;; These re-export cl-sqlite functions and add some quickapi-specific helpers
+;;; These re-export inquisitio functions and add some quickapi-specific helpers
 
 (defun last-insert-id ()
   "Get the rowid of the last inserted row.

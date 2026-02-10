@@ -6,7 +6,7 @@ Build a JSON API in Common Lisp in 5 minutes.
 
 - SBCL or another Common Lisp implementation
 - Quicklisp installed
-- cl-sqlite configured (see [Database Guide](03-database.md))
+- inquisitio configured (see [Database Guide](03-database.md))
 
 ## Install
 

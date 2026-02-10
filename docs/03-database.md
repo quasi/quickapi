@@ -1,12 +1,12 @@
 # Database Guide
 
-Using SQLite with quickapi via cl-sqlite.
+Using SQLite with quickapi via inquisitio.
 
 **Prerequisites**: [Quickstart](01-quickstart.md)
 
 ## Overview
 
-Quickapi includes conveniences for cl-sqlite, a Common Lisp SQLite library. SQLite is ideal for small to medium APIs:
+Quickapi includes conveniences for inquisitio, a Common Lisp SQLite library. SQLite is ideal for small to medium APIs:
 
 - Zero configuration
 - Single file database

@@ -376,7 +376,7 @@ Perl-compatible regular expression library.
 **Functions**: `split`, `scan`
 **Related**: URI pattern, validation
 
-### cl-sqlite
+### inquisitio
 SQLite database bindings.
 
 **Usage**: Database operations

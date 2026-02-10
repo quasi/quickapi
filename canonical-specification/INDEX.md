@@ -142,7 +142,7 @@ This Canon references these external technologies:
 | Hunchentoot | Latest | HTTP server | ADR-004 |
 | com.inuoe.jzon | Latest | JSON parsing | Vocabulary |
 | cl-ppcre | Latest | Regex | Vocabulary |
-| cl-sqlite | Latest | SQLite bindings | Vocabulary |
+| inquisitio | Latest | SQLite bindings | Vocabulary |
 | Common Lisp | SBCL | Language | All |
 
 ---

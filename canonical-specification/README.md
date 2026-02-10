@@ -112,7 +112,7 @@ Standardized error responses.
 Extracted from code, docs, and commit history:
 
 1. **"Thin veneer over proven libraries"** (0.97 confidence)
-   - Minimal abstraction over Snooze, jzon, cl-sqlite
+   - Minimal abstraction over Snooze, jzon, inquisitio
    - Easy to debug, less magic
 
 2. **"5 macros, not 50 abstractions"** (0.95 confidence)

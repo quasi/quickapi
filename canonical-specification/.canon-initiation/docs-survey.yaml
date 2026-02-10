@@ -73,7 +73,7 @@ dependencies:
     description: "Regex library"
     purpose: "Pattern validation"
   sqlite:
-    description: "cl-sqlite database bindings"
+    description: "inquisitio database bindings"
     purpose: "SQLite database operations"
     optional: true
 

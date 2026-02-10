@@ -5,22 +5,22 @@
   :author "Quasilabs"
   :license "MIT"
   :homepage "https://github.com/quasi/quickapi"
-  :description "Curated stack for JSON APIs in Common Lisp - like FastAPI but simpler"
-  :long-description "Quickapi makes building JSON APIs in Common Lisp as easy as FastAPI
-makes it in Python. It's not a framework - it's a carefully curated combination of
-proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent documentation."
+  :description "Curated stack for JSON APIs in Common Lisp"
+  :long-description "Quickapi makes building JSON APIs in Common Lisp.
+ It's not a framework - it's a carefully curated combination of
+proven libraries (Snooze, jzon, inquisitio) with thin glue code and excellent documentation."
 
   :depends-on ("clack"            ; HTTP server abstraction
                "clack-handler-hunchentoot"  ; Default HTTP server (auto-loaded)
                "lack"             ; Middleware framework
                "lack-request"     ; Request parsing
                "lack-response"    ; Response utilities
-               "com.inuoe.jzon"  ; Modern JSON library
-               "cl-ppcre"        ; Regex for validation
-               "sqlite"          ; cl-sqlite for database
-               "jose"            ; JWT/JOSE implementation
-               "ironclad"        ; Cryptography for password hashing
-               "cl-base64")      ; Base64 encoding for password storage
+               "com.inuoe.jzon"   ; Modern JSON library
+               "cl-ppcre"         ; Regex for validation
+               "inquisitio"       ; sqlite library for database
+               "jose"             ; JWT/JOSE implementation
+               "ironclad"         ; Cryptography for password hashing
+               "cl-base64")       ; Base64 encoding for password storage
 
   :serial t
   :components ((:module "src"

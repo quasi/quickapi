@@ -77,7 +77,7 @@ rationale_from_comments:
       confidence: 0.93
 
     - file: quickapi.asd
-      long_description: "It's not a framework - it's a carefully curated combination of proven libraries (Snooze, jzon, cl-sqlite) with thin glue code and excellent documentation."
+      long_description: "It's not a framework - it's a carefully curated combination of proven libraries (Snooze, jzon, inquisitio) with thin glue code and excellent documentation."
       rationale:
         - decision: "Not a framework, but curated libraries"
           why: "Avoid framework complexity and lock-in"
@@ -117,11 +117,11 @@ rationale_from_comments:
           confidence: 0.92
 
     - file: sqlite.lisp
-      comment: "ABOUTME: SQLite conveniences for quickapi - thin wrapper over cl-sqlite"
+      comment: "ABOUTME: SQLite conveniences for quickapi - thin wrapper over inquisitio"
       rationale:
-        - decision: "Thin wrapper over cl-sqlite"
+        - decision: "Thin wrapper over inquisitio"
           why: "Consistent with philosophy - minimal abstraction"
-          impact: "Users can drop to cl-sqlite if needed"
+          impact: "Users can drop to inquisitio if needed"
           confidence: 0.93
 
     - file: response.lisp
