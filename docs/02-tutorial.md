@@ -1,4 +1,6 @@
-# Tutorial: Build a Todo API
+# Tutorial: Build a Todo API (Low-Level Approach)
+
+> **Note**: This tutorial uses manual SQL and helper functions. For the recommended approach using `defmodel` (which auto-generates CRUD functions and table schemas), see **[Tutorial: Todo API with defmodel](tutorial-defmodel.md)**.
 
 Build a complete CRUD API with database persistence. Takes about 30 minutes.
 

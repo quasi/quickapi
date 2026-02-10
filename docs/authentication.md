@@ -39,11 +39,10 @@ Create a login endpoint that generates and returns a JWT:
                (verify-password (gethash "password" *body*)
                                (gethash "password_hash" user)))
           ;; Valid login - generate JWT
-          (ok (make-hash "token"
-                  (generate-jwt
-                   (list :sub (gethash "id" user)
-                         :email (gethash "email" user)
-                         :role (gethash "role" user)))))
+          (ok :token (generate-jwt
+                       (list :sub (gethash "id" user)
+                             :email (gethash "email" user)
+                             :role (gethash "role" user)))))
           ;; Invalid credentials
           (error-response 401 "Invalid credentials")))))
 ```
@@ -66,8 +65,10 @@ Add `:auth :jwt` to any route that requires authentication:
   (let ((user-id (gethash "sub" *current-user*)))
     ;; Use user-id from the token
     (with-db ("app.db")
-      (created (create-todo (make-hash "title" (gethash "title" *body*)
-                                       "user_id" user-id))))))
+      (let ((todo-data (make-hash-table :test 'equal)))
+        (setf (gethash "title" todo-data) (gethash "title" *body*)
+              (gethash "user_id" todo-data) user-id)
+        (created (create-todo todo-data))))))
 ```
 
 ### Making authenticated requests
@@ -104,7 +105,7 @@ Expired tokens return 401:
 (api-get "/admin" (:auth :jwt)
   (let ((role (gethash "role" *current-user*)))
     (if (string= role "admin")
-        (ok (list-all-users))
+        (ok (list-users))
         (error-response 403 "Admin only"))))
 ```
 
@@ -125,9 +126,8 @@ QuickAPI doesn't provide refresh tokens built-in. Implement them yourself:
     (if (and token-record
              (< (get-universal-time) (gethash "expires_at" token-record)))
         ;; Valid refresh token - issue new access token
-        (ok (make-hash "token"
-                (generate-jwt
-                 (list :sub (gethash "user_id" token-record)))))
+        (ok :token (generate-jwt
+                     (list :sub (gethash "user_id" token-record))))
         (error-response 401 "Invalid refresh token"))))
 ```
 
@@ -191,8 +191,10 @@ Add `:auth :session` to routes that require authentication:
 (api-post "/todos" (:auth :session)
   (let ((user-id (gethash "id" *current-user*)))
     (with-db ("app.db")
-      (created (create-todo (make-hash "title" (gethash "title" *body*)
-                                       "user_id" user-id))))))
+      (let ((todo-data (make-hash-table :test 'equal)))
+        (setf (gethash "title" todo-data) (gethash "title" *body*)
+              (gethash "user_id" todo-data) user-id)
+        (created (create-todo todo-data))))))
 ```
 
 ### Session helpers
@@ -207,7 +209,9 @@ Get and set session values:
 (setf (session-get :cart-items) '(1 2 3))
 
 ;; Works with any value type
-(setf (session-get :preferences) (make-hash "theme" "dark"))
+(let ((prefs (make-hash-table :test 'equal)))
+  (setf (gethash "theme" prefs) "dark")
+  (setf (session-get :preferences) prefs))
 ```
 
 ### Session storage
@@ -263,9 +267,10 @@ Create an endpoint to generate keys:
     (let* ((user-id (gethash "sub" *current-user*))
            (key (ironclad:byte-array-to-hex-string
                  (ironclad:random-data 32)))
-           (api-key-data (make-hash "key" key
-                                    "user_id" user-id
-                                    "name" (gethash "name" *body*))))
+           (api-key-data (make-hash-table :test 'equal)))
+      (setf (gethash "key" api-key-data) key
+            (gethash "user_id" api-key-data) user-id
+            (gethash "name" api-key-data) (gethash "name" *body*))
       (created (create-api-key api-key-data)))))
 ```
 
@@ -308,7 +313,9 @@ Mark keys as inactive:
       (unless (= (gethash "user_id" api-key) user-id)
         (error-response 403 "Not authorized"))
       ;; Soft delete - mark as inactive
-      (update-api-key id (make-hash "active" nil))
+      (let ((update (make-hash-table :test 'equal)))
+        (setf (gethash "active" update) nil)
+        (update-api-key id update))
       (no-content))))
 ```
 
@@ -321,7 +328,8 @@ Always hash passwords before storing. QuickAPI uses PBKDF2-SHA256.
 ```lisp
 (api-post "/register" ()
   (with-db ("app.db")
-    (let ((user-data (copy-hash-table *body*)))
+    (let ((user-data (make-hash-table :test 'equal)))
+      (maphash (lambda (k v) (setf (gethash k user-data) v)) *body*)
       ;; Hash the password
       (setf (gethash "password_hash" user-data)
             (hash-password (gethash "password" user-data)))
@@ -340,7 +348,7 @@ Always hash passwords before storing. QuickAPI uses PBKDF2-SHA256.
                ;; Verify password against hash
                (verify-password (gethash "password" *body*)
                                (gethash "password_hash" user)))
-          (ok (make-hash "token" (generate-jwt ...)))
+          (ok :token (generate-jwt (list :sub (gethash "id" user)))))
           (error-response 401 "Invalid credentials")))))
 ```
 

@@ -257,7 +257,7 @@ The registry can be used to generate API documentation, OpenAPI specs, etc.
 
 ## Related Documentation
 
-- [ADR-001: Route Registry Architecture](../canon/core/decisions/ADR-001-route-registry-architecture.md) - Design rationale
+- [ADR-001: Route Registry Architecture](../canonical-specification/core/decisions/ADR-001-route-registry-architecture.md) - Design rationale
 - [API Reference](../README.md) - User-facing route macros
 - [Tutorial](02-tutorial.md) - Using path parameters in practice
 

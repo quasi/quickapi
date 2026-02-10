@@ -364,7 +364,7 @@ async function createUser(data: UserData) {
 - **400 Bad Request**: Reserved for syntax errors (malformed JSON)
 - **Semantic clarity**: Clients can distinguish error types
 
-See [ADR-003: HTTP 422 for Validation Errors](../canon/core/decisions/ADR-003-http-422-for-validation-errors.md)
+See [ADR-003: HTTP 422 for Validation Errors](../canonical-specification/core/decisions/ADR-003-http-422-for-validation-errors.md)
 
 ### Why Collect All Validation Errors?
 

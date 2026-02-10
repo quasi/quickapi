@@ -2,6 +2,12 @@
 # Canon Manifest for quickAPI
 # Specification extracted via canon-initiate from working implementation
 
+canon:
+  name: quickAPI
+  version: "0.1.0"
+  description: "Build JSON APIs in Common Lisp with minimal boilerplate"
+  canon_version: "0.2.0"
+
 meta:
   system: quickAPI
   tagline: "Build JSON APIs in Common Lisp with minimal boilerplate"

@@ -1,0 +1,111 @@
+---
+# Verification Strategy for quickAPI
+# Defines how to verify implementation matches specification
+
+meta:
+  version: "0.1.0"
+  last_updated: "2026-02-10"
+
+test_requirements:
+  unit_tests:
+    framework: "FiveAM"
+    coverage_target: 0.80
+    required_for:
+      - "All exported functions"
+      - "All route macros"
+      - "Validation functions"
+      - "Database helpers"
+      - "Authentication utilities"
+
+  integration_tests:
+    framework: "FiveAM with test HTTP server"
+    required_scenarios:
+      - "Full request/response cycle"
+      - "JSON parsing and serialization"
+      - "Error handling and status codes"
+      - "Authentication flow (JWT, session, API key)"
+      - "Database CRUD operations"
+
+  smoke_tests:
+    tool: "curl scripts"
+    endpoints:
+      - name: "Health check"
+        method: "GET"
+        path: "/health"
+        expected_status: 200
+
+integration_points:
+  external_libraries:
+    - name: "snooze"
+      verification: "Route registration and dispatch"
+      test_approach: "Mock Snooze resource lookup"
+
+    - name: "hunchentoot"
+      verification: "HTTP server start/stop"
+      test_approach: "Test server lifecycle in isolation"
+
+    - name: "com.inuoe.jzon"
+      verification: "JSON serialization correctness"
+      test_approach: "Round-trip encode/decode tests"
+
+    - name: "cl-sqlite"
+      verification: "Database operations"
+      test_approach: "Use :memory: database for tests"
+
+  mocked_dependencies:
+    database:
+      strategy: "Use in-memory SQLite (:memory:)"
+      rationale: "Fast, isolated, no filesystem side effects"
+
+    http_requests:
+      strategy: "Mock Lack request environment"
+      rationale: "Test route handlers without real HTTP"
+
+anti_patterns:
+  avoid:
+    - pattern: "Mocking internal functions"
+      reason: "Tests become brittle, coupled to implementation"
+      alternative: "Test through public API"
+
+    - pattern: "Testing framework internals"
+      reason: "Not our responsibility to test snooze/hunchentoot"
+      alternative: "Test our integration with those libraries"
+
+    - pattern: "Snapshot tests for JSON"
+      reason: "Fragile, hard to maintain"
+      alternative: "Assert specific fields and structure"
+
+confidence_weights:
+  unit_tests: 0.4
+  integration_tests: 0.4
+  smoke_tests: 0.1
+  static_analysis: 0.1
+
+verification_commands:
+  run_all_tests: "sbcl --eval '(ql:quickload :quickapi/tests)' --eval '(5am:run! :quickapi-tests)' --quit"
+  run_unit_tests: "sbcl --eval '(ql:quickload :quickapi/tests)' --eval '(5am:run! :quickapi-tests)' --quit"
+  check_coverage: "Not yet implemented"
+  smoke_tests: "scripts/smoke-tests.sh"
+
+success_criteria:
+  all_tests_pass: true
+  no_compilation_warnings: true
+  smoke_tests_pass: true
+  confidence_score: 0.85
+
+verification:
+  static_analysis:
+    enabled: false
+    reason: "Not yet implemented"
+
+  unit_tests:
+    enabled: true
+    command: "sbcl --eval '(ql:quickload :quickapi/tests)' --eval '(5am:run! :quickapi-tests)' --quit"
+    expected_pass_rate: 1.0
+
+  integration_tests:
+    enabled: true
+    command: "sbcl --eval '(ql:quickload :quickapi/tests)' --eval '(5am:run! :quickapi-tests)' --quit"
+    expected_pass_rate: 1.0
+
+  smoke_tests: []

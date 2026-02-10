@@ -119,9 +119,13 @@ Expected response:
 ## Documentation
 
 - **[Tutorial: Todo API with defmodel](docs/tutorial-defmodel.md)** - Build a complete API using models
+- **[Tutorial: Todo API (low-level)](docs/02-tutorial.md)** - Manual approach without defmodel
 - **[Authentication Guide](docs/authentication.md)** - JWT, sessions, and API keys
 - **[Middleware Guide](docs/middleware.md)** - CORS, logging, sessions
 - **[API Reference](docs/reference.md)** - Complete function reference
+- **[Error Response Format](docs/05-error-response-format.md)** - JSON error schema
+- **[Route Registry Architecture](docs/06-route-registry-architecture.md)** - Internal routing design
+- **[Conditions](docs/conditions.md)** - Error condition hierarchy
 - **[Deployment](docs/deployment.md)** - Strategies
 
 
@@ -135,7 +139,7 @@ Instead of writing SQL and CRUD functions manually, declare your model:
 (defmodel todo
   ((title :type string :required t :max-length 200)
    (completed :type boolean :default nil)
-   (user-id :type integer :references user)))
+   (user-id :type integer :required t)))
 ```
 
 This automatically generates:
@@ -154,10 +158,14 @@ Use them immediately:
 (with-db ("app.db")
   (migrate-models)  ; Create tables from all models
 
-  (create-todo (make-hash "title" "Buy milk"))
+  (let ((data (make-hash-table :test 'equal)))
+    (setf (gethash "title" data) "Buy milk")
+    (create-todo data))
   (find-todo 1)
   (list-todos :limit 10 :order-by '(:created_at :desc))
-  (update-todo 1 (make-hash "completed" t))
+  (let ((update (make-hash-table :test 'equal)))
+    (setf (gethash "completed" update) t)
+    (update-todo 1 update))
   (delete-todo 1))
 ```
 
@@ -168,9 +176,10 @@ Path parameters like `:id` are automatically bound as variables:
 ```lisp
 (api-get "/todos/:id" ()
   (with-db ("app.db")
-    (if-let ((todo (find-todo id)))
-      (ok todo)
-      (not-found))))
+    (let ((todo (find-todo id)))
+      (if todo
+          (ok todo)
+          (not-found)))))
 
 (api-delete "/todos/:id" ()
   (with-db ("app.db")
@@ -243,7 +252,8 @@ If validation fails, automatic 422 response with error details.
     (require-fields "email" "password"))
 
   (with-db ("app.db")
-    (let ((user-data (copy-hash-table *body*)))
+    (let ((user-data (make-hash-table :test 'equal)))
+      (maphash (lambda (k v) (setf (gethash k user-data) v)) *body*)
       ;; Hash password before storing
       (setf (gethash "password_hash" user-data)
             (hash-password (gethash "password" user-data)))
@@ -312,7 +322,8 @@ Here's a complete authenticated todo API:
       (require-fields "email" "password")
       (require-length "password" :min 8))
 
-    (let ((user-data (copy-hash-table *body*)))
+    (let ((user-data (make-hash-table :test 'equal)))
+      (maphash (lambda (k v) (setf (gethash k user-data) v)) *body*)
       (setf (gethash "password_hash" user-data)
             (hash-password (gethash "password" user-data)))
       (remhash "password" user-data)
@@ -337,7 +348,8 @@ Here's a complete authenticated todo API:
 (api-post "/todos" (:auth :jwt)
   (with-db ("todos.db")
     (validate *body* (require-fields "title"))
-    (let ((todo-data (copy-hash-table *body*)))
+    (let ((todo-data (make-hash-table :test 'equal)))
+      (maphash (lambda (k v) (setf (gethash k todo-data) v)) *body*)
       (setf (gethash "user_id" todo-data)
             (gethash "sub" *current-user*))
       (created (create-todo todo-data)))))
@@ -345,13 +357,14 @@ Here's a complete authenticated todo API:
 (api-delete "/todos/:id" (:auth :jwt)
   (with-db ("todos.db")
     (let ((user-id (gethash "sub" *current-user*)))
-      (if-let ((todo (find-todo id)))
-        (if (= (gethash "user_id" todo) user-id)
-            (progn
-              (delete-todo id)
-              (no-content))
-            (error-response 403 "Not authorized"))
-        (not-found)))))
+      (let ((todo (find-todo id)))
+        (if todo
+            (if (= (gethash "user_id" todo) user-id)
+                (progn
+                  (delete-todo id)
+                  (no-content))
+                (error-response 403 "Not authorized"))
+            (not-found))))))
 
 ;; Startup
 (defun main ()
@@ -417,7 +430,7 @@ QuickAPI:
 - ✓ Clack/Lack middleware support
 - ✓ Authentication (JWT, sessions, API keys)
 
-**284 tests passing**. Ready for building APIs.
+**303 tests passing**. Ready for building APIs.
 
 ## License
 

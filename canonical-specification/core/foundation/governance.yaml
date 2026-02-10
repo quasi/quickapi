@@ -1,0 +1,44 @@
+---
+# Governance for quickAPI
+# Principles and guardrails for evolution and decision-making
+
+principles:
+  - id: SIMPLICITY
+    name: "Prefer simple solutions over clever abstractions"
+    description: "quickAPI is a thin layer — complexity fights maintainability"
+    guardrails:
+      - "5 route macros (api-get, api-post, etc.) instead of complex routing DSL"
+      - "Automatic JSON parsing instead of configurable serialization strategies"
+      - "Don't create quickAPI-specific middleware system — use Lack directly (ADR-002)"
+
+  - id: EXPLICITNESS
+    name: "Make behavior obvious at call site"
+    description: "Users should understand what happens without reading framework internals"
+    guardrails:
+      - "Path parameters automatically bound as variables (visible in function body)"
+      - "Validation failures return 422 with structured errors (documented format)"
+      - "Use explicit special variables (*body*, *request*), not thread-locals"
+
+  - id: MINIMAL_SURFACE
+    name: "Expose only what users need"
+    description: "Small API surface means less to learn and fewer breaking changes"
+    guardrails:
+      - "5 HTTP method macros, not separate functions per method"
+      - "Single validate macro instead of validator classes"
+      - "No DSL explosion — route macros + validate macro are enough"
+
+  - id: CONVENTION_OVER_CONFIGURATION
+    name: "Sensible defaults, minimal configuration"
+    description: "Most APIs have similar needs — optimize for the common case"
+    guardrails:
+      - "JSON serialization automatic (no content-type negotiation)"
+      - "Error responses use standard format (no customization needed)"
+      - "Don't build an ORM — expose SQL directly via thin helpers"
+
+  - id: NO_AUTH_FRAMEWORK
+    name: "Provide auth helpers, not an auth framework"
+    description: "Auth needs vary wildly — give building blocks, not policy"
+    guardrails:
+      - "Provide hash-password, verify-password, generate-jwt, verify-jwt"
+      - "Don't enforce specific auth flows"
+      - "Users compose their own auth strategy"
