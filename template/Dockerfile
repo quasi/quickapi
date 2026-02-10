@@ -26,8 +26,9 @@ RUN sbcl --non-interactive \
 WORKDIR /app
 COPY . .
 
-# Build executable
+# Register project with ASDF and build executable
 RUN sbcl --non-interactive \
+    --eval '(push (truename "/app/") asdf:*central-registry*)' \
     --eval '(ql:quickload :my-api)' \
     --eval '(sb-ext:save-lisp-and-die "my-api" :toplevel #'"'"'my-api:main :executable t :compression t)'
 

@@ -121,7 +121,7 @@
                   '(:content-type "application/json; charset=utf-8")
                   (list (com.inuoe.jzon:stringify
                          (format-error-response 500 "Internal server error"
-                                                (format nil "~a" e)))))))))))
+                                                (format nil "~a" e))))))))))
 
 (defun make-error-response (status error-type message &optional details)
   "Create a JSON error response.
