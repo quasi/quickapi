@@ -1,6 +1,8 @@
 # quickAPI
 
-Build JSON APIs in Common Lisp with zero boilerplate. Simple. Beginner friendly. Agent friendly.
+Build JSON APIs in Common Lisp with zero boilerplate. Simple. Beginner friendly. Deployment template available.
+
+Agent friendly, point your agent to this file and he should be able to use this library just fine.
 
 > This Library is designed by me and implemented by Claude with my inputs. This is designed for consumption by Agents.  If you have a problem with Agent written code then this library is not for you.
 
@@ -24,7 +26,7 @@ Perfect for building REST APIs when you want to focus on your application logic,
 - **Middleware support**: CORS, logging, sessions via Lack
 - **SQLite integration**: Zero-config database for prototypes and small apps
 
-No XML config. No class hierarchies. No framework lock-in.
+No XML config. No class hierarchies. No complex framework.
 
 ## Quickstart
 
@@ -113,6 +115,15 @@ Expected response:
 ```
 
 ✓ You now have a working API with database persistence.
+
+## Documentation
+
+- **[Tutorial: Todo API with defmodel](docs/tutorial-defmodel.md)** - Build a complete API using models
+- **[Authentication Guide](docs/authentication.md)** - JWT, sessions, and API keys
+- **[Middleware Guide](docs/middleware.md)** - CORS, logging, sessions
+- **[API Reference](docs/reference.md)** - Complete function reference
+- **[Deployment](docs/deployment.md)** - Strategies
+
 
 ## Core concepts
 
@@ -355,13 +366,6 @@ Run it:
 (load "todo-api.lisp")
 (todo-api:main)
 ```
-
-## Documentation
-
-- **[Tutorial: Todo API with defmodel](docs/tutorial-defmodel.md)** - Build a complete API using models
-- **[Authentication Guide](docs/authentication.md)** - JWT, sessions, and API keys
-- **[Middleware Guide](docs/middleware.md)** - CORS, logging, sessions
-- **[API Reference](docs/reference.md)** - Complete function reference
 
 ## Troubleshooting
 
