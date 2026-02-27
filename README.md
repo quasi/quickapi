@@ -1,10 +1,8 @@
 # quickAPI
 
-Build JSON APIs in Common Lisp with zero boilerplate. Simple. Beginner friendly. Deployment template available.
+Build and deploy JSON APIs in quickly Common Lisp. Simple. Beginner friendly. Deployment template available.
 
-Agent friendly, point your agent to this file and he should be able to use this library just fine.
-
-> This Library is designed by me and implemented by Claude with my inputs. This is designed for consumption by Agents.  If you have a problem with Agent written code then this library is not for you.
+*This Library ships with dev and integration SKILLS. Just point your agent to the project claude.md*
 
 ## Why quickAPI?
 
@@ -24,9 +22,9 @@ Perfect for building REST APIs when you want to focus on your application logic,
 - **Built-in validation**: Required fields, types, lengths, ranges, patterns
 - **Authentication**: JWT, sessions, and API keys built-in
 - **Middleware support**: Access logging, sessions via Lack
-- **SQLite integration**: Zero-config database for prototypes and small apps
+- **SQLite integration**: Database for prototypes and small apps
 
-No XML config. No class hierarchies. No complex framework.
+
 
 ## Quickstart
 
@@ -38,7 +36,7 @@ No XML config. No class hierarchies. No complex framework.
 ### Install
 
 ```bash
-cd ~/.quicklisp/local-projects
+cd ~/quicklisp/local-projects
 git clone https://github.com/quasi/inquisitio.git
 git clone https://github.com/quasi/quickapi.git
 ```
