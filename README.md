@@ -23,7 +23,7 @@ Perfect for building REST APIs when you want to focus on your application logic,
 - **Automatic JSON**: Responses serialize automatically, requests parse automatically
 - **Built-in validation**: Required fields, types, lengths, ranges, patterns
 - **Authentication**: JWT, sessions, and API keys built-in
-- **Middleware support**: CORS, logging, sessions via Lack
+- **Middleware support**: Access logging, sessions via Lack
 - **SQLite integration**: Zero-config database for prototypes and small apps
 
 No XML config. No class hierarchies. No complex framework.
@@ -176,10 +176,7 @@ Path parameters like `:id` are automatically bound as variables:
 ```lisp
 (api-get "/todos/:id" ()
   (with-db ("app.db")
-    (let ((todo (find-todo id)))
-      (if todo
-          (ok todo)
-          (not-found)))))
+    (ok (find-todo id))))  ; Signals record-not-found → dispatcher converts to 404
 
 (api-delete "/todos/:id" ()
   (with-db ("app.db")
@@ -270,7 +267,6 @@ Enable middleware in your API definition:
 ```lisp
 (defapi my-api
   :middlewares (:accesslog                    ; Request logging
-                (:cors :origins '("*"))       ; CORS headers
                 :session                       ; Session support
                 :backtrace))                  ; Error backtraces
 ```
