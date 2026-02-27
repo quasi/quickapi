@@ -164,6 +164,7 @@ Returns (values resource-name extracted-args) or NIL."
                                      :address address
                                      :server server
                                      :use-thread t
+                                     :debug debug-enabled
                                      :silent (not debug-enabled)))
       (format t "~&Server started on http://~a:~a/~%" address port)
       *server*)))
