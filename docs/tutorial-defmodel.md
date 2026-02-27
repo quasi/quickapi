@@ -32,7 +32,9 @@ Create a new file `todo-api.lisp`:
 Load it in your REPL:
 
 ```lisp
+(ql:quickload :quickapi)
 (load "todo-api.lisp")
+(in-package :todo-api)
 ```
 
 You should see:
@@ -115,7 +117,7 @@ Add a registration endpoint:
     ;; Hash password before storing
     (let ((user-data (make-hash-table :test 'equal)))
       (setf (gethash "email" user-data) (gethash "email" *body*))
-      (setf (gethash "password_hash" user-data)
+      (setf (gethash "password-hash" user-data)
             (hash-password (gethash "password" *body*)))
 
       ;; Create user and return (without password hash)
@@ -129,7 +131,7 @@ Reload the file and test:
 ```bash
 curl -X POST -H "Content-Type: application/json" \
      -d '{"email":"alice@example.com","password":"secret123"}' \
-     http://localhost:8000/register
+     http://localhost:8008/register
 ```
 
 Expected response:
@@ -142,7 +144,7 @@ Test validation (password too short):
 ```bash
 curl -X POST -H "Content-Type: application/json" \
      -d '{"email":"bob@example.com","password":"short"}' \
-     http://localhost:8000/register
+     http://localhost:8008/register
 ```
 
 Expected response (422 error):
@@ -180,7 +182,7 @@ Test login:
 ```bash
 curl -X POST -H "Content-Type: application/json" \
      -d '{"email":"alice@example.com","password":"secret123"}' \
-     http://localhost:8000/login
+     http://localhost:8008/login
 ```
 
 Expected response:
@@ -195,7 +197,7 @@ Test wrong password:
 ```bash
 curl -X POST -H "Content-Type: application/json" \
      -d '{"email":"alice@example.com","password":"wrongpass"}' \
-     http://localhost:8000/login
+     http://localhost:8008/login
 ```
 
 Expected response (401 error):
@@ -221,7 +223,7 @@ Add a protected endpoint to create todos. Note the `:auth :jwt` option:
     (let ((user-id (gethash "sub" *current-user*))
           (todo-data (make-hash-table :test 'equal)))
       (setf (gethash "title" todo-data) (gethash "title" *body*))
-      (setf (gethash "user_id" todo-data) user-id)
+      (setf (gethash "user-id" todo-data) user-id)
       (when (gethash "completed" *body*)
         (setf (gethash "completed" todo-data) (gethash "completed" *body*)))
 
@@ -234,7 +236,7 @@ Test without token (should fail):
 ```bash
 curl -X POST -H "Content-Type: application/json" \
      -d '{"title":"Buy milk"}' \
-     http://localhost:8000/todos
+     http://localhost:8008/todos
 ```
 
 Expected response (401 error):
@@ -248,7 +250,7 @@ Test with token (replace YOUR_TOKEN with the token from step 6):
 curl -X POST -H "Content-Type: application/json" \
      -H "Authorization: Bearer YOUR_TOKEN" \
      -d '{"title":"Buy milk"}' \
-     http://localhost:8000/todos
+     http://localhost:8008/todos
 ```
 
 Expected response:
@@ -275,7 +277,7 @@ Test:
 
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-     http://localhost:8000/todos
+     http://localhost:8008/todos
 ```
 
 Expected response:
@@ -319,7 +321,7 @@ Test marking complete:
 curl -X PUT -H "Content-Type: application/json" \
      -H "Authorization: Bearer YOUR_TOKEN" \
      -d '{"completed":true}' \
-     http://localhost:8000/todos/1
+     http://localhost:8008/todos/1
 ```
 
 Expected response:
@@ -356,7 +358,7 @@ Test:
 
 ```bash
 curl -X DELETE -H "Authorization: Bearer YOUR_TOKEN" \
-     http://localhost:8000/todos/1
+     http://localhost:8008/todos/1
 ```
 
 Expected: Empty response with status 204.
@@ -365,7 +367,7 @@ Verify deletion:
 
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-     http://localhost:8000/todos
+     http://localhost:8008/todos
 ```
 
 Expected response:
@@ -383,8 +385,8 @@ Add a convenient startup function at the end of the file:
 (defun main ()
   "Initialize database and start the server."
   (init-db)
-  (format t "~&Starting todo API on port 8000...~%")
-  (start :port 8000))
+  (format t "~&Starting todo API on port 8008...~%")
+  (start :port 8008))
 ```
 
 Now you can start everything with:
@@ -403,32 +405,32 @@ Let's test the complete workflow:
 # 1. Register a user
 curl -X POST -H "Content-Type: application/json" \
      -d '{"email":"test@example.com","password":"password123"}' \
-     http://localhost:8000/register
+     http://localhost:8008/register
 
 # 2. Login and get token
 TOKEN=$(curl -X POST -H "Content-Type: application/json" \
      -d '{"email":"test@example.com","password":"password123"}' \
-     http://localhost:8000/login | jq -r '.token')
+     http://localhost:8008/login | jq -r '.token')
 
 # 3. Create a todo
 curl -X POST -H "Content-Type: application/json" \
      -H "Authorization: Bearer $TOKEN" \
      -d '{"title":"Learn quickapi"}' \
-     http://localhost:8000/todos
+     http://localhost:8008/todos
 
 # 4. List todos
 curl -H "Authorization: Bearer $TOKEN" \
-     http://localhost:8000/todos
+     http://localhost:8008/todos
 
 # 5. Mark complete
 curl -X PUT -H "Content-Type: application/json" \
      -H "Authorization: Bearer $TOKEN" \
      -d '{"completed":true}' \
-     http://localhost:8000/todos/1
+     http://localhost:8008/todos/1
 
 # 6. Delete
 curl -X DELETE -H "Authorization: Bearer $TOKEN" \
-     http://localhost:8000/todos/1
+     http://localhost:8008/todos/1
 ```
 
 ## What you learned
@@ -487,7 +489,7 @@ The complete `todo-api.lisp` from this tutorial:
       (require-pattern "email" "^[^@]+@[^@]+\\.[^@]+$"))
     (let ((user-data (make-hash-table :test 'equal)))
       (setf (gethash "email" user-data) (gethash "email" *body*))
-      (setf (gethash "password_hash" user-data)
+      (setf (gethash "password-hash" user-data)
             (hash-password (gethash "password" *body*)))
       (let ((user (create-user user-data)))
         (remhash "password_hash" user)
@@ -516,7 +518,7 @@ The complete `todo-api.lisp` from this tutorial:
     (let ((user-id (gethash "sub" *current-user*))
           (todo-data (make-hash-table :test 'equal)))
       (setf (gethash "title" todo-data) (gethash "title" *body*))
-      (setf (gethash "user_id" todo-data) user-id)
+      (setf (gethash "user-id" todo-data) user-id)
       (when (gethash "completed" *body*)
         (setf (gethash "completed" todo-data) (gethash "completed" *body*)))
       (created (create-todo todo-data)))))
@@ -555,6 +557,6 @@ The complete `todo-api.lisp` from this tutorial:
 
 (defun main ()
   (init-db)
-  (format t "~&Starting todo API on port 8000...~%")
-  (start :port 8000))
+  (format t "~&Starting todo API on port 8008...~%")
+  (start :port 8008))
 ```

@@ -158,12 +158,12 @@
     (case name
       (:accesslog
        (asdf:load-system "lack-middleware-accesslog" :verbose nil)
-       (funcall (find-symbol "LACK-MIDDLEWARE-ACCESSLOG" "LACK.MIDDLEWARE.ACCESSLOG") app))
+       (funcall (symbol-value (find-symbol "*LACK-MIDDLEWARE-ACCESSLOG*" "LACK/MIDDLEWARE/ACCESSLOG")) app))
       (:session
        (asdf:load-system "lack-middleware-session" :verbose nil)
-       (apply (find-symbol "LACK-MIDDLEWARE-SESSION" "LACK.MIDDLEWARE.SESSION") app args))
+       (apply (symbol-value (find-symbol "*LACK-MIDDLEWARE-SESSION*" "LACK/MIDDLEWARE/SESSION")) app args))
       (:backtrace
        (asdf:load-system "lack-middleware-backtrace" :verbose nil)
-       (funcall (find-symbol "LACK-MIDDLEWARE-BACKTRACE" "LACK.MIDDLEWARE.BACKTRACE") app))
+       (funcall (symbol-value (find-symbol "*LACK-MIDDLEWARE-BACKTRACE*" "LACK/MIDDLEWARE/BACKTRACE")) app))
       (t (warn "Unknown middleware: ~a" name)
          app))))

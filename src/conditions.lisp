@@ -220,8 +220,11 @@
    Returns (status headers body) list."
   (let* ((status (http-error-status condition))
          (message (error-message condition))
-         (details (when (slot-boundp condition 'details)
-                    (http-error-details condition)))
+         (details (cond
+                    ((typep condition 'validation-error)
+                     (validation-errors condition))
+                    ((slot-boundp condition 'details)
+                     (http-error-details condition))))
          (body (format-error-response status message details)))
     (list status
           '(:content-type "application/json; charset=utf-8")
