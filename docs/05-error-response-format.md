@@ -82,13 +82,11 @@ All error responses follow this JSON structure:
   "details": [
     {
       "field": "email",
-      "error": "field_required"
+      "message": "required"
     },
     {
       "field": "age",
-      "error": "value_out_of_range",
-      "expected": "0-150",
-      "actual": 200
+      "message": "must be between 0 and 150"
     }
   ]
 }
@@ -97,12 +95,8 @@ All error responses follow this JSON structure:
 **Details Structure** (validation errors):
 ```typescript
 details: Array<{
-  field: string,           // Field name that failed
-  error: string,           // Error type (see Validation Errors below)
-  expected?: any,          // Expected value/range (for range/pattern errors)
-  actual?: any,            // Actual value provided
-  min?: number,            // Minimum (for length/range errors)
-  max?: number             // Maximum (for length/range errors)
+  field: string,     // Field name that failed
+  message: string    // Human-readable error description
 }>
 ```
 
@@ -122,7 +116,7 @@ details: Array<{
 
 ```json
 {
-  "error": "internal_server_error",
+  "error": "internal_error",
   "message": "Internal server error"
 }
 ```
@@ -149,97 +143,41 @@ details: Array<{
 
 ---
 
-## Validation Error Types
+## Validation Error Detail Format
 
-When validation fails, the `details` array contains objects with these `error` values:
+Each entry in the `details` array has exactly two keys:
 
-### field_required
+| Key | Type | Description |
+|-----|------|-------------|
+| `field` | string | The field name that failed validation |
+| `message` | string | Human-readable description of what failed |
 
-**When**: Required field is missing or empty
+### Examples by validator
 
+**`require-fields`** — missing or empty field:
 ```json
-{
-  "field": "email",
-  "error": "field_required"
-}
+{"field": "email", "message": "required"}
 ```
 
-**Triggered by**: `(require-fields "email")`
-
----
-
-### invalid_type
-
-**When**: Field has wrong type
-
+**`require-type`** — wrong type:
 ```json
-{
-  "field": "age",
-  "error": "invalid_type",
-  "expected": "integer",
-  "actual": "string"
-}
+{"field": "age", "message": "must be of type integer"}
 ```
 
-**Triggered by**: `(require-type "age" 'integer)`
-
-**Type names**:
-- `string`
-- `integer`
-- `number` (integer or float)
-- `boolean`
-
----
-
-### invalid_length
-
-**When**: String length outside allowed range
-
+**`require-length`** — string too short or too long:
 ```json
-{
-  "field": "title",
-  "error": "invalid_length",
-  "min": 1,
-  "max": 200,
-  "actual": 250
-}
+{"field": "title", "message": "must be between 1 and 200 characters"}
 ```
 
-**Triggered by**: `(require-length "title" :min 1 :max 200)`
-
----
-
-### value_out_of_range
-
-**When**: Numeric value outside allowed range
-
+**`require-range`** — number out of range:
 ```json
-{
-  "field": "age",
-  "error": "value_out_of_range",
-  "min": 0,
-  "max": 150,
-  "actual": 200
-}
+{"field": "age", "message": "must be between 0 and 150"}
 ```
 
-**Triggered by**: `(require-range "age" :min 0 :max 150)`
-
----
-
-### pattern_mismatch
-
-**When**: String doesn't match required pattern
-
+**`require-pattern`** — pattern mismatch:
 ```json
-{
-  "field": "email",
-  "error": "pattern_mismatch",
-  "expected": ".*@.*\\..*"
-}
+{"field": "email", "message": "must match pattern .*@.*\\..*"}
 ```
-
-**Triggered by**: `(require-pattern "email" ".*@.*\\..*")`
 
 ---
 
@@ -270,19 +208,15 @@ Content-Type: application/json
   "details": [
     {
       "field": "name",
-      "error": "field_required"
+      "message": "required"
     },
     {
       "field": "age",
-      "error": "value_out_of_range",
-      "min": 0,
-      "max": 150,
-      "actual": 200
+      "message": "must be between 0 and 150"
     },
     {
       "field": "email",
-      "error": "pattern_mismatch",
-      "expected": ".*@.*\\..*"
+      "message": "must match pattern .*@.*\\..*"
     }
   ]
 }
@@ -317,11 +251,7 @@ interface ErrorResponse {
 
 interface ValidationError {
   field: string;
-  error: string;
-  expected?: any;
-  actual?: any;
-  min?: number;
-  max?: number;
+  message: string;
 }
 
 async function createUser(data: UserData) {
@@ -337,7 +267,7 @@ async function createUser(data: UserData) {
     if (response.status === 422) {
       // Handle validation errors
       error.details?.forEach(err => {
-        console.log(`${err.field}: ${err.error}`);
+        console.log(`${err.field}: ${err.message}`);
       });
     } else if (response.status === 404) {
       console.log('Resource not found');
@@ -374,9 +304,9 @@ quickAPI validates **all fields** before returning errors (doesn't fail-fast):
 ```json
 {
   "details": [
-    {"field": "name", "error": "field_required"},
-    {"field": "email", "error": "pattern_mismatch"},
-    {"field": "age", "error": "value_out_of_range"}
+    {"field": "name", "message": "required"},
+    {"field": "email", "message": "must match pattern .*@.*\\..*"},
+    {"field": "age", "message": "must be between 0 and 150"}
   ]
 }
 ```
@@ -385,7 +315,7 @@ quickAPI validates **all fields** before returning errors (doesn't fail-fast):
 ```json
 {
   "details": [
-    {"field": "name", "error": "field_required"}
+    {"field": "name", "message": "required"}
   ]
 }
 ```
@@ -407,7 +337,7 @@ quickAPI validates **all fields** before returning errors (doesn't fail-fast):
         "bad_request",
         "not_found",
         "validation_error",
-        "internal_server_error"
+        "internal_error"
       ]
     },
     "message": {
@@ -417,23 +347,10 @@ quickAPI validates **all fields** before returning errors (doesn't fail-fast):
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["field", "error"],
+        "required": ["field", "message"],
         "properties": {
           "field": {"type": "string"},
-          "error": {
-            "type": "string",
-            "enum": [
-              "field_required",
-              "invalid_type",
-              "invalid_length",
-              "value_out_of_range",
-              "pattern_mismatch"
-            ]
-          },
-          "expected": {},
-          "actual": {},
-          "min": {"type": "number"},
-          "max": {"type": "number"}
+          "message": {"type": "string"}
         }
       }
     }

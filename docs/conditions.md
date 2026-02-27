@@ -68,18 +68,18 @@ quickapi-error (base for all errors)
 │   ├── client-error (4xx)
 │   │   ├── bad-request-error (400)
 │   │   ├── unauthorized-error (401)
+│   │   │   └── authentication-error (also a quickapi-error leaf)
+│   │   │       └── invalid-credentials
 │   │   ├── forbidden-error (403)
 │   │   ├── not-found-error (404)
 │   │   ├── conflict-error (409)
 │   │   └── validation-error (422)
 │   └── server-error (5xx)
 │       └── internal-server-error (500)
-├── database-error
-│   ├── record-not-found (also inherits not-found-error)
-│   ├── duplicate-record (also inherits conflict-error)
-│   └── connection-error
-└── authentication-error (also inherits unauthorized-error)
-    └── invalid-credentials
+└── database-error
+    ├── record-not-found (also inherits not-found-error)
+    ├── duplicate-record (also inherits conflict-error)
+    └── connection-error
 ```
 
 ## Common Patterns
@@ -136,11 +136,13 @@ quickapi-error (base for all errors)
 
 ## Available Restarts
 
-### model-find, model-find-by
+### model-find
 
 - `USE-VALUE` - Provide a record to use instead of erroring
 - `RETURN-NIL` - Return NIL instead of signaling error
 - `RETRY` - Retry the database lookup
+
+**Note**: `model-find-by` does **not** signal `record-not-found` — it returns `nil` silently when no record matches.
 
 ### validate
 

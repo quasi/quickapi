@@ -7,7 +7,7 @@ Complete reference for all exported symbols in the `quickapi` package.
 ### `defapi` (macro)
 
 ```lisp
-(defapi name &key name version description middlewares)
+(defapi symbol-name &key name version description middlewares)
 ```
 
 Define an API with metadata and middleware configuration.
@@ -501,18 +501,18 @@ quickapi-error (base)
   │   ├── client-error (4xx)
   │   │   ├── bad-request-error (400)
   │   │   ├── unauthorized-error (401)
+  │   │   │   └── authentication-error (also a quickapi-error leaf)
+  │   │   │       └── invalid-credentials
   │   │   ├── forbidden-error (403)
   │   │   ├── not-found-error (404)
   │   │   ├── conflict-error (409)
   │   │   └── validation-error (422)
   │   └── server-error (5xx)
   │       └── internal-server-error (500)
-  ├── database-error
-  │   ├── record-not-found (also inherits not-found-error)
-  │   ├── duplicate-record (also inherits conflict-error)
-  │   └── connection-error
-  └── authentication-error (inherits unauthorized-error)
-      └── invalid-credentials
+  └── database-error
+      ├── record-not-found (also inherits not-found-error)
+      ├── duplicate-record (also inherits conflict-error)
+      └── connection-error
 ```
 
 ### Condition Accessors

@@ -39,7 +39,7 @@ A global hash table mapping `(method . uri-pattern)` keys to route metadata:
 ```lisp
 (defstruct route-entry
   pattern        ; Original pattern: "/users/:id"
-  resource-name  ; Snooze resource symbol
+  resource-name  ; Unique route identifier symbol
   segments       ; Parsed: ((:literal . "users") (:param . ID))
   method)        ; HTTP method: :GET, :POST, etc.
 ```
@@ -98,18 +98,18 @@ Matches incoming request URIs to registered patterns:
 5. Collect parameter values
 6. Return resource name + extracted parameters
 
-### 6. Snooze Integration
+### 6. Clack/Lack Integration
 
-**Function**: `quickapi-resource-name`
-**Location**: `src/core.lisp:101-117`
+**Registry**: `*route-handlers*`
+**Location**: `src/lack-app.lisp`
 
-Custom resource naming function hooked into Snooze via `*resource-name-function*`:
+Each route registers both a pattern in `*route-registry*` (for URI matching) and a handler closure in `*route-handlers*` (for dispatch):
 
 ```lisp
-(setf snooze:*resource-name-function* #'quickapi-resource-name)
+(register-handler :get "/users/:id" handler-fn)
 ```
 
-This allows Snooze to use quickAPI's pattern matching instead of default literal matching.
+The Clack application dispatches incoming requests by calling `match-uri-to-route` to find the matching pattern, then invokes the corresponding handler closure with the extracted parameters.
 
 ## Example Flow
 
@@ -123,18 +123,19 @@ This allows Snooze to use quickAPI's pattern matching instead of default literal
 **Macro expansion**:
 1. Parse pattern: `/users/:id/posts/:post-id`
 2. Extract parameters: `ID`, `POST-ID`
-3. Register route in `*route-registry*`
-4. Generate Snooze `defroute` with parameter binding
+3. Register pattern in `*route-registry*` via `register-route`
+4. Register handler closure in `*route-handlers*` via `register-handler`
+5. Handler closure binds extracted params as local variables
 
 ### Request Handling
 
 **Incoming request**: `GET /users/42/posts/99`
 
-1. Snooze calls `quickapi-resource-name` with URI
-2. `match-uri-to-route` searches registry
+1. Clack app receives request, extracts method and path
+2. `match-uri-to-route` searches `*route-registry*`
 3. Finds pattern `/users/:id/posts/:post-id`
 4. Extracts: `((ID . "42") (POST-ID . "99"))`
-5. Returns resource name
+5. Looks up handler closure in `*route-handlers*`
 6. Handler executes with `user-id=42`, `post-id=99` bound
 
 ## Design Decisions
@@ -265,7 +266,7 @@ The registry can be used to generate API documentation, OpenAPI specs, etc.
 
 | File | Purpose | Lines |
 |------|---------|-------|
-| `src/core.lisp:13-117` | Route registry implementation | ~105 LoC |
+| `src/core.lisp` | Route registry + route macros | ~349 LoC |
 | `tests/route-registry-tests.lisp` | Unit tests | ~240 LoC |
 
 ---
